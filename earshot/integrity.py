@@ -67,7 +67,7 @@ def runtime_files(folder):
     files=set()
     for name in ['traces','system_issue','attempt_state','stopped']:
         files.update(p.resolve() for p in (folder/name).rglob('*.json') if p.is_file())
-    for name in ['pauses.json','control.json']:
+    for name in ['pauses.json','control.json','plan.json']:
         if (folder/name).is_file():files.add((folder/name).resolve())
     return files
 

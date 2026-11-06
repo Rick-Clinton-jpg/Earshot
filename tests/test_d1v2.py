@@ -116,3 +116,41 @@ def test_fake_process_records_timeout_and_reaps_group(tmp_path,monkeypatch):
     backend=Backend({'backend':'codex','cli':'fixture','model':'fixture','effort':'low','output_method':'codex_jsonl'},tmp_path,tmp_path/'schema',lambda:None)
     result=backend('fixture','prompt',control)
     assert result['timed_out'];assert len(killed)==1;assert process.n==2
+
+
+def test_fake_cli_usage_pause_drains_inflight_and_records_left(tmp_path,monkeypatch):
+    import threading
+    from earshot.d1v2 import Backend
+    barrier=threading.Barrier(3);mutex=threading.Lock();launched=[]
+    patterns=json.loads((__import__('pathlib').Path(__file__).resolve().parents[1]/'earshot/system_issue_patterns.json').read_text())
+    message=patterns['codex_trial_usage_messages'][0]
+    class Process:
+        pid=123456789
+        def __init__(self,index):self.index=index;self.returncode=1 if index==0 else 0
+        def communicate(self,*a,**kw):
+            barrier.wait(timeout=5)
+            event={'type':'error','message':message} if self.index==0 else {'type':'item.completed','item':{'type':'agent_message','text':json.dumps(answer('AB'))}}
+            return json.dumps(event).encode(),b''
+    def popen(*a,**kw):
+        with mutex:
+            index=len(launched);launched.append(index)
+        return Process(index)
+    monkeypatch.setattr('subprocess.Popen',popen)
+    control=Control(tmp_path,datetime.now(timezone.utc)+timedelta(hours=1))
+    backend=Backend({'backend':'codex','cli':'fixture','model':'fixture','effort':'low','output_method':'codex_jsonl'},tmp_path,tmp_path/'schema',lambda:None)
+    attempts=AttemptRunner(tmp_path,patterns,control,backend,reserve_at_launch=True)
+    run_stage([TASK],FILES,attempts)
+    assert len(launched)==3
+    assert len(list((tmp_path/'traces').glob('*.json')))==2
+    pause=json.loads((tmp_path/'pauses.json').read_text())[0]
+    assert pause['reason']=='usage limit' and len(pause['calls_finished'])==2 and len(pause['calls_left'])==13
+    assert all('incoming' not in name for name in pause['calls_finished'])
+
+
+def test_cutoff_finalization_without_model_launch(tmp_path):
+    from earshot.d1v2 import finalize_cutoff
+    now=datetime.now(timezone.utc);control=Control(tmp_path,now+timedelta(seconds=179))
+    (tmp_path/'plan.json').write_text(json.dumps({'calls':{'never-launched':{'name':'never-launched','task_id':'fixture','group':'free','prompt_sha256':'fixture'}}}))
+    finalize_cutoff(tmp_path,control)
+    row=json.loads((tmp_path/'stopped/never-launched.json').read_text())
+    assert row['administrative_status']=='stopped_by_cutoff' and row['attempts']==0

@@ -14,7 +14,7 @@ from .config import Config
 from .runner import build_command
 from .prompts import relay_prompt
 from .integrity import require_ready,ensure_published,digest,git
-from .reliability import AttemptRunner,Control,stamp
+from .reliability import AttemptRunner,Control,stamp,write_new,replace_state
 from .d1v2_score import PAIRS,task_summary
 
 
@@ -46,6 +46,7 @@ def parse_stream(stdout,method):
     if method=='codex_jsonl':
         for event in events:
             item=event.get('item',{})
+            if not isinstance(item,dict):continue
             if event.get('type')=='item.completed' and item.get('type')=='agent_message':
                 try:answer=json.loads(item.get('text',''))
                 except ValueError:answer=None
@@ -64,7 +65,7 @@ class Backend:
         version=subprocess.check_output([self.config['cli'],'--version'],text=True,timeout=15).strip()
         if version!=self.config['version']:raise RuntimeError('CLI version mismatch')
         if self.config['backend']=='claude' and not self.config.get('output_method_reviewed'):raise RuntimeError('Claude output method not reviewed')
-    def __call__(self,name,prompt,control):
+    def __call__(self,name,prompt,control,reserve=None):
         self.publication_check()
         while True:
             stop=control.before_launch()
@@ -72,6 +73,8 @@ class Backend:
             with control.lock:
                 if control.pause_until:continue
                 # Check directly before process creation, after all preflight/publication I/O.
+                if control.clock.now()>=control.latest_launch:return {'administrative_status':'stopped_by_cutoff','call':name}
+                if reserve is not None:reserve()
                 if control.clock.now()>=control.latest_launch:return {'administrative_status':'stopped_by_cutoff','call':name}
                 started=control.clock.now();tick=time.monotonic()
                 process=subprocess.Popen(self.argv,cwd=self.workspace,stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,start_new_session=True)
@@ -96,6 +99,13 @@ def run_stage(tasks,files,attempts,workers=4):
     for task in tasks:
         if task['role']=='reserve' and missing<=0:continue
         rows=[]
+        if hasattr(attempts,'folder'):
+            path=attempts.folder/'plan.json'
+            plan=json.loads(path.read_text()) if path.exists() else {'calls':{}}
+            for group in ['free','incoming']:
+                for spec in calls(task,files,group):
+                    plan['calls'][spec['name']]={k:v for k,v in spec.items() if k!='prompt'} | {'prompt_sha256':hashlib.sha256(spec['prompt'].encode()).hexdigest()}
+            replace_state(path,plan)
         with ThreadPoolExecutor(max_workers=workers) as pool:
             for group in ['free','incoming']:
                 specs=calls(task,files,group)
@@ -106,12 +116,37 @@ def run_stage(tasks,files,attempts,workers=4):
                         row=attempts.run(spec['name'],spec['prompt'])
                         return dict(row,**{k:spec[k] for k in ['task_id','group','incoming_pair','replicate']})
                     rows.extend(pool.map(run,batch))
+                    if attempts.control.blocked:break
+                if attempts.control.blocked:break
                 # All three free-choice calls finish before any incoming pair starts.
         summary=task_summary(task,rows);summaries[task['id']]=summary;results.extend(rows)
         if task['role']=='primary' and not summary['valid']:missing+=1
         elif task['role']=='reserve' and summary['valid']:missing-=1
         if attempts.control.blocked:break
+    if hasattr(attempts,'folder') and attempts.control.blocked and attempts.control.blocked.startswith('manual:'):
+        record_drained_pause(attempts.folder,attempts.control)
     return {'tasks':summaries,'calls':results}
+
+
+def record_drained_pause(folder,control):
+    plan=json.loads((folder/'plan.json').read_text())['calls']
+    finished=sorted(p.stem for p in (folder/'traces').glob('*.json'))
+    left=sorted(set(plan)-set(finished))
+    events=json.loads((folder/'pauses.json').read_text())
+    for event in reversed(events):
+        if event['event']=='manual_pause':
+            event.update(calls_finished=finished,calls_left=left,drained_at_utc=stamp(control.clock.now()))
+            break
+    replace_state(folder/'pauses.json',events)
+
+
+def finalize_cutoff(folder,control):
+    if control.clock.now()<control.latest_launch:raise RuntimeError('last-launch deadline has not arrived')
+    plan=json.loads((folder/'plan.json').read_text())['calls']
+    for name,metadata in plan.items():
+        if (folder/'traces'/f'{name}.json').exists() or (folder/'stopped'/f'{name}.json').exists():continue
+        attempts=len(list((folder/'attempt_state'/name).glob('attempt*.json')))
+        write_new(folder/'stopped'/f'{name}.json',dict(metadata,administrative_status='stopped_by_cutoff',attempts=attempts,at_utc=stamp(control.clock.now())))
 
 
 def verify_workspace(workspace,data):
@@ -128,6 +163,8 @@ def main(argv=None):
     p=argparse.ArgumentParser()
     for name in ['repo','branch','registration','seal','seal-digest','backend-config','workspace','run-dir']:p.add_argument('--'+name,required=True)
     p.add_argument('--backend',choices=['codex','claude'],required=True)
+    p.add_argument('--resume-rick',action='store_true',help='Use only after Rick explicitly authorizes this resume')
+    p.add_argument('--finalize-cutoff',action='store_true',help='Record unlaunched calls after the last-launch deadline, without starting models')
     args=p.parse_args(argv);repo=Path(args.repo).resolve()
     registration=json.loads(Path(args.registration).read_text());require_ready(registration)
     config=json.loads(Path(args.backend_config).read_text());require_ready(config)
@@ -148,16 +185,29 @@ def main(argv=None):
     original_check=check
     def check():
         original_check();verify_workspace(args.workspace,data)
-    backend=Backend(config,args.workspace,schema,check);backend.preflight()
+    backend=Backend(config,args.workspace,schema,check)
     folder=Path(args.run_dir);folder.mkdir(parents=True,exist_ok=True)
     with (folder/'worker.lock').open('a') as lock:
         fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
         control=Control(folder,datetime.fromisoformat(registration['cutoff_utc'].replace('Z','+00:00')))
+        planfile=folder/'plan.json'
+        if not planfile.exists():
+            plan={'calls':{s['name']:{k:v for k,v in s.items() if k!='prompt'} | {'prompt_sha256':hashlib.sha256(s['prompt'].encode()).hexdigest()} for t in data['tasks'] if t['role']=='primary' for g in ['free','incoming'] for s in calls(t,data['candidate_files'],g)}}
+            write_new(planfile,plan)
+        if args.finalize_cutoff or control.clock.now()>=control.latest_launch:
+            finalize_cutoff(folder,control);print('stopped by the cutoff');return
+        if args.resume_rick:control.resume_by_rick()
+        if control.blocked:
+            print('paused: usage limit' if control.blocked=='manual: usage limit' else 'paused: '+control.blocked);raise SystemExit(75)
+        backend.preflight()
         patterns=json.loads(patternsfile.read_text())
         # Persist task metadata inside each final trace, not just the transient scheduler result.
         metadata={s['name']:{k:s[k] for k in ['task_id','group','incoming_pair','replicate']} for t in data['tasks'] for g in ['free','incoming'] for s in calls(t,data['candidate_files'],g)}
-        def execute(name,prompt,ctl):return dict(backend(name,prompt,ctl),**metadata[name])
-        attempts=AttemptRunner(folder,patterns,control,execute)
+        def execute(name,prompt,ctl,reserve):return dict(backend(name,prompt,ctl,reserve),**metadata[name])
+        attempts=AttemptRunner(folder,patterns,control,execute,reserve_at_launch=True)
         run_stage(data['tasks'],data['candidate_files'],attempts)
+        if control.blocked:
+            print('paused: usage limit' if control.blocked=='manual: usage limit' else 'paused: '+control.blocked)
+            raise SystemExit(75)
 
 if __name__=='__main__':main()

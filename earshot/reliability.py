@@ -48,6 +48,7 @@ def classify(record,patterns):
     matches=[p['id'] for p in patterns['patterns'] if re.search(p['regex'],text,re.I)]
     if record.get('exit_code') not in (None,0) and record.get('answer') is None and matches:
         return 'system_issue',matches
+    if record.get('answer') is None:return 'system_issue',['unclassified_no_answer']
     return 'unclassified_failure',[]
 
 
@@ -103,12 +104,28 @@ class Control:
     def stop(self,reason):
         with self.lock:
             self.blocked=reason;self.event({'event':'arm_stopped','reason':reason,'at_utc':stamp(self.clock.now())});self.persist()
+    def manual_pause(self,text,call,reason):
+        with self.lock:
+            self.blocked='manual: '+reason
+            _,details=reset_time(text,self.clock.now())
+            self.event({'event':'manual_pause','reason':reason,'at_utc':stamp(self.clock.now()),'call':call,**details})
+            self.persist()
+    def resume_by_rick(self):
+        with self.lock:
+            if self.clock.now()>=self.latest_launch:return 'stopped_by_cutoff'
+            if self.blocked and not self.blocked.startswith('manual:'):
+                raise RuntimeError('blocked arm requires reconciliation; retry counters cannot be reset')
+            if not self.blocked:raise RuntimeError('arm is not manually paused')
+            self.event({'event':'resume_authorized_by_rick','at_utc':stamp(self.clock.now())})
+            self.blocked=None;self.pause_until=None;self.persist()
+            return None
     def before_launch(self):
         while True:
             with self.lock:
-                if self.blocked:return 'arm_stopped'
                 now=self.clock.now()
                 if now>=self.latest_launch:return 'stopped_by_cutoff'
+                if self.blocked:
+                    return 'paused_usage_limit' if self.blocked=='manual: usage limit' else ('paused_unclassified' if self.blocked.startswith('manual:') else 'arm_stopped')
                 if not self.pause_until:return None
                 if now>=self.pause_until:
                     self.pause_until=None;self.event({'event':'resume','at_utc':stamp(now)});self.persist();return None
@@ -117,8 +134,8 @@ class Control:
 
 
 class AttemptRunner:
-    def __init__(self,folder,patterns,control,execute):
-        self.folder=Path(folder);self.patterns=patterns;self.control=control;self.execute=execute
+    def __init__(self,folder,patterns,control,execute,reserve_at_launch=False):
+        self.folder=Path(folder);self.patterns=patterns;self.control=control;self.execute=execute;self.reserve_at_launch=reserve_at_launch
     def run(self,name,prompt):
         if Path(name).name!=name:raise ValueError('invalid call name')
         import hashlib
@@ -148,22 +165,36 @@ class AttemptRunner:
                 return {'call':name,'administrative_status':'system_issue_not_run','attempts':n}
             stop=self.control.before_launch()
             if stop:
+                if stop.startswith('paused_'):return {'call':name,'administrative_status':stop,'attempts':n}
                 path=self.folder/'stopped'/f'{name}.json'
                 row={'call':name,'administrative_status':stop,'at_utc':stamp(self.control.clock.now()),'attempts':n,'prompt_sha256':digest}
                 if not path.exists():write_new(path,row)
                 return row
             n+=1
-            write_new(call/f'attempt{n}.json',{'attempt':n,'prompt_sha256':digest,'at_utc':stamp(self.control.clock.now())})
-            row=self.execute(name,prompt,self.control)
+            def reserve():write_new(call/f'attempt{n}.json',{'attempt':n,'prompt_sha256':digest,'at_utc':stamp(self.control.clock.now())})
+            if self.reserve_at_launch:row=self.execute(name,prompt,self.control,reserve)
+            else:
+                reserve();row=self.execute(name,prompt,self.control)
             # execute checks cutoff again after preflight; an unlaunched call is administrative.
             if row.get('administrative_status'):
+                if row['administrative_status'].startswith('paused_'):return dict(row,attempts=n-1)
                 write_new(self.folder/'stopped'/f'{name}.json',dict(row,prompt_sha256=digest))
                 return row
-            kind,matches=classify(row,self.patterns)
-            row.update(name=name,attempt=n,prompt_sha256=digest,classification=kind,system_issue_matches=matches)
-            if kind=='system_issue':
-                write_new(self.folder/'system_issue'/f'{name}-attempt{n}.json',row)
-                self.control.pause(error_text(row),name)
-                continue
-            write_new(final,row)
-            return row
+            with self.control.lock:
+                kind,matches=classify(row,self.patterns)
+                row.update(name=name,attempt=n,prompt_sha256=digest,classification=kind,system_issue_matches=matches)
+                if kind=='system_issue':
+                    write_new(self.folder/'system_issue'/f'{name}-attempt{n}.json',row)
+                    manual=set(matches)&set(self.patterns.get('manual_pause_matches',[]))
+                    if manual:
+                        reason='unclassified no answer' if 'unclassified_no_answer' in manual else 'usage limit'
+                        self.control.manual_pause(error_text(row),name,reason)
+                        return {'call':name,'administrative_status':'paused_unclassified' if reason=='unclassified no answer' else 'paused_usage_limit','attempts':n}
+                    self.control.pause(error_text(row),name)
+                    continue
+                # Even a failed process with an answer is final, but a limit still pauses the arm.
+                limits=[p['id'] for p in self.patterns['patterns'] if p['id'] in self.patterns.get('manual_pause_matches',[]) and re.search(p['regex'],error_text(row),re.I)]
+                if row.get('exit_code')!=0 and limits:
+                    self.control.manual_pause(error_text(row),name,'usage limit')
+                write_new(final,row)
+                return row

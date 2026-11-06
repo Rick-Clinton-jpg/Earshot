@@ -5,7 +5,7 @@ from statistics import mean
 from .gate import gate_handoff
 
 PAIRS=tuple(''.join(p) for p in combinations('ABCD',2))
-LABELS=['outputs keep relevant incoming pairs','outputs revert to the free-choice pair','unresolved']
+LABELS=['outputs keep relevant incoming pairs','outputs do not keep them','unresolved']
 
 def average(values):
     values=[v for v in values if v is not None]
@@ -51,7 +51,12 @@ def task_summary(task,rows):
             'accepted_in':len(inside),'accepted_out':len(outside),'rates':rates,
             'counts':dict(Counter(r.get('classification',r.get('administrative_status','missing')) for r in rows)),
             'agreement_by_pair':agreement,'agreement_pairs_evaluable':sum(v is not None for v in agreement.values()),
-            'output_distributions':distributions,'K_alt_pattern_outcome':'unresolved',
+            'output_distributions':distributions,
+            'per_call_measures':[{'name':r.get('name'),'group':r['group'],'classification':r.get('classification'),'output_pair':output(r),
+             'kept':output(r)==r['incoming_pair'] if r['group']=='incoming' and output(r) else None,
+             'includes_target':task['target'] in output(r) if output(r) else None,
+             'equals_default':output(r)==default if output(r) and default else None} for r in rows if 'classification' in r],
+            'K_alt_pattern_outcome':'unresolved',
             'pattern_outcome_reason':'Inference and interval methods are PENDING_REVIEW; no rule is applied.'}
 
 def select_valid(tasks,summaries):
@@ -65,7 +70,9 @@ def aggregate(items):
     keys=next((x['rates'].keys() for x in items),[])
     return {'task_count':len(items),'point_estimates':{k:average([x['rates'][k] for x in items]) for k in keys},
             'evaluable_tasks':{k:sum(x['rates'][k] is not None for x in items) for k in keys},
-            'agreement_pairs_evaluable':sum(x['agreement_pairs_evaluable'] for x in items)}
+            'agreement_pairs_evaluable':sum(x['agreement_pairs_evaluable'] for x in items),
+            'default_stability_all_tasks':sum(x['rates']['default_stability']==1 for x in items)/len(items) if items else None,
+            'default_stability_not_evaluable':sum(x['rates']['default_stability'] is None for x in items)}
 
 def arm_summary(tasks,rows):
     summaries={t['id']:task_summary(t,[r for r in rows if r['task_id']==t['id']]) for t in tasks}
@@ -98,6 +105,19 @@ def main(argv=None):
     if ledger.get('seal_sha256')!=digest(args.seal):raise RuntimeError('ledger points to another seal')
     tasks=json.loads((Path(args.repo)/registration['tasks_path']).read_text())['tasks']
     rows=[json.loads(x.read_text()) for x in (Path(args.run_dir)/'traces').glob('*.json')]
-    print(json.dumps(arm_summary(tasks,rows),indent=2))
+    stopped=[json.loads(x.read_text()) for x in (Path(args.run_dir)/'stopped').glob('*.json')]
+    issues=[json.loads(x.read_text()) for x in (Path(args.run_dir)/'system_issue').glob('*.json')]
+    # A task attempted only on the system-issue path still belongs in attempted-primary coverage.
+    plan=json.loads((Path(args.run_dir)/'plan.json').read_text())['calls']
+    stopped=[dict(plan[r.get('name',r.get('call'))],**r) for r in stopped]
+    finished={r['name'] for r in rows} | {r.get('name',r.get('call')) for r in stopped}
+    for issue in issues:
+        if issue['name'] not in finished:
+            row=dict(issue,administrative_status='system_issue_not_run',attempts=issue['attempt']);row.pop('classification',None);rows.append(row)
+            finished.add(issue['name'])
+    report=arm_summary(tasks,rows+stopped)
+    report['system_issue_attempt_count']=len(issues);report['system_issue_attempts']=issues
+    report['stopped_by_cutoff']=stopped
+    print(json.dumps(report,indent=2))
 
 if __name__=='__main__':main()

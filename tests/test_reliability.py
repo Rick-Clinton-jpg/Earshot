@@ -17,22 +17,30 @@ class FakeClock:
 def good():return {'exit_code':0,'answer':{'required_memory_refs':['handoff_refs/A.txt','handoff_refs/B.txt'],'note':'fake'}}
 def issue(message='usage limit'):return {'exit_code':1,'answer':None,'events':[{'type':'error','message':message}]}
 
-def test_usage_pause_then_same_prompt_retry(tmp_path):
+def test_usage_pause_requires_rick_then_same_prompt_retry(tmp_path):
     clock=FakeClock();control=Control(tmp_path,clock.now()+timedelta(days=1),clock=clock);seen=[]
+    message=PATTERNS['codex_trial_usage_messages'][0]
     def fake(name,prompt,ctrl):
         seen.append((prompt,clock.now()))
-        return issue('usage limit; try again at 5:32 AM') if len(seen)==1 else good()
+        return issue(message) if len(seen)==1 else good()
     runner=AttemptRunner(tmp_path,PATTERNS,control,fake)
-    out=runner.run('call','identical prompt')
+    assert runner.run('call','identical prompt')['administrative_status']=='paused_usage_limit'
+    assert runner.run('other','other prompt')['administrative_status']=='paused_usage_limit'
+    assert len(seen)==1 and not clock.sleeps
+    # A plain process restart does not authorize resume.
+    restarted=Control(tmp_path,control.cutoff,clock=clock)
+    assert restarted.before_launch()=='paused_usage_limit'
+    restarted.resume_by_rick()
+    out=AttemptRunner(tmp_path,PATTERNS,restarted,fake).run('call','identical prompt')
     assert out['classification']=='accepted' and out['attempt']==2
     assert [x[0] for x in seen]==['identical prompt']*2
-    assert seen[1][1]==datetime(2026,11,7,0,2,tzinfo=timezone.utc)
     assert (tmp_path/'system_issue/call-attempt1.json').exists()
-    events=json.loads((tmp_path/'pauses.json').read_text());assert [e['event'] for e in events]==['system_issue_pause','resume']
-    assert events[0]['parsed_reset_utc']=='2026-11-07T00:02:00Z'
+    events=json.loads((tmp_path/'pauses.json').read_text())
+    assert [e['event'] for e in events]==['manual_pause','resume_authorized_by_rick']
+    assert 'trial_usage_limit' in json.loads((tmp_path/'system_issue/call-attempt1.json').read_text())['system_issue_matches']
 
 
-@pytest.mark.parametrize('record,expected',[(good(),'accepted'),({'exit_code':0,'answer':None},'gate_rejected'),({'exit_code':0,'answer':{'required_memory_refs':['bad']}},'gate_rejected'),({'exit_code':None,'answer':None,'timed_out':True},'timed_out'),({'exit_code':2,'answer':None,'stderr':'unknown local fault'},'unclassified_failure'),({'exit_code':1,'answer':good()['answer'],'stderr':'usage limit'},'unclassified_failure')])
+@pytest.mark.parametrize('record,expected',[(good(),'accepted'),({'exit_code':0,'answer':None},'gate_rejected'),({'exit_code':0,'answer':{'required_memory_refs':['bad']}},'gate_rejected'),({'exit_code':None,'answer':None,'timed_out':True},'timed_out'),({'exit_code':1,'answer':good()['answer'],'stderr':'usage limit'},'unclassified_failure')])
 def test_final_outcomes_never_retry(tmp_path,record,expected):
     clock=FakeClock();control=Control(tmp_path,clock.now()+timedelta(hours=6),clock=clock);calls=[]
     def fake(*a):calls.append(a);return record.copy()
@@ -45,7 +53,7 @@ def test_final_outcomes_never_retry(tmp_path,record,expected):
 
 def test_five_system_issues_stop_arm(tmp_path):
     clock=FakeClock();control=Control(tmp_path,clock.now()+timedelta(days=1),clock=clock);calls=[]
-    def fake(*args):calls.append(1);return issue()
+    def fake(*args):calls.append(1);return issue('network unreachable')
     result=AttemptRunner(tmp_path,PATTERNS,control,fake).run('call','prompt')
     assert result['administrative_status']=='system_issue_not_run' and len(calls)==5
     assert len(list((tmp_path/'system_issue').glob('*.json')))==5
@@ -71,7 +79,7 @@ def test_counter_survives_restart(tmp_path):
 
 def test_cutoff_does_not_wait_for_late_reset(tmp_path):
     clock=FakeClock();control=Control(tmp_path,clock.now()+timedelta(minutes=10),clock=clock)
-    r=AttemptRunner(tmp_path,PATTERNS,control,lambda *a:issue('usage limit; try again at 11:00 PM')).run('call','prompt')
+    r=AttemptRunner(tmp_path,PATTERNS,control,lambda *a:issue('network unreachable; try again at 11:00 PM')).run('call','prompt')
     assert r['administrative_status']=='stopped_by_cutoff'
     assert clock.now()==control.latest_launch
     assert not (tmp_path/'traces/call.json').exists()
@@ -105,3 +113,44 @@ def test_stopped_before_spawn_is_reusable_without_resampling(tmp_path):
     runner.execute=lambda *a:pytest.fail('administratively stopped call must not launch')
     assert runner.run('stopped','same bytes')['administrative_status']=='stopped_by_cutoff'
     assert control.blocked is None
+
+
+def test_unknown_no_answer_pauses_not_agent_failure(tmp_path):
+    clock=FakeClock();control=Control(tmp_path,clock.now()+timedelta(days=1),clock=clock)
+    out=AttemptRunner(tmp_path,PATTERNS,control,lambda *a:issue('unrecognised fixture error')).run('unknown','same')
+    assert out['administrative_status']=='paused_unclassified'
+    trace=json.loads((tmp_path/'system_issue/unknown-attempt1.json').read_text())
+    assert trace['classification']=='system_issue' and trace['system_issue_matches']==['unclassified_no_answer']
+    assert not (tmp_path/'traces/unknown.json').exists()
+
+
+def test_manual_pause_cutoff_overrides_resume(tmp_path):
+    clock=FakeClock();control=Control(tmp_path,clock.now()+timedelta(minutes=10),clock=clock)
+    control.manual_pause('usage limit','fixture','usage limit')
+    clock.value+=timedelta(hours=1)
+    assert control.resume_by_rick()=='stopped_by_cutoff'
+    assert control.before_launch()=='stopped_by_cutoff'
+
+
+def test_pause_before_actual_launch_does_not_consume_attempt(tmp_path):
+    clock=FakeClock();control=Control(tmp_path,clock.now()+timedelta(days=1),clock=clock)
+    def prelaunch(name,prompt,ctrl,reserve):
+        ctrl.manual_pause('usage limit','another-call','usage limit')
+        return {'administrative_status':'paused_usage_limit'}
+    runner=AttemptRunner(tmp_path,PATTERNS,control,prelaunch,reserve_at_launch=True)
+    assert runner.run('call','same')['administrative_status']=='paused_usage_limit'
+    assert not list((tmp_path/'attempt_state/call').glob('attempt*.json'))
+    control.resume_by_rick()
+    def success(name,prompt,ctrl,reserve):reserve();return good()
+    runner.execute=success
+    assert runner.run('call','same')['attempt']==1
+
+
+def test_failed_process_with_answer_is_final_but_limit_still_pauses(tmp_path):
+    clock=FakeClock();control=Control(tmp_path,clock.now()+timedelta(days=1),clock=clock)
+    record=dict(good(),exit_code=1,stderr='rate limit')
+    runner=AttemptRunner(tmp_path,PATTERNS,control,lambda *a:record)
+    out=runner.run('call','same')
+    assert out['classification']=='unclassified_failure' and control.before_launch()=='paused_usage_limit'
+    runner.execute=lambda *a:pytest.fail('answer must never be rerun')
+    control.resume_by_rick();assert runner.run('call','same')==out
