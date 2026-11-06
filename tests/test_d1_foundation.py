@@ -26,6 +26,7 @@ def test_cli_version_mismatch_refuses_exec(monkeypatch, tmp_path):
         assert args[-1] == '--version'
         return subprocess.CompletedProcess(args, 0, 'fake-wrong-version\n', '')
     monkeypatch.setattr(subprocess, 'run', fake)
+    monkeypatch.setattr(runner, 'verify_registration', lambda path: {})
     result=runner.run_agent('bad-version','prompt',tmp_path/'schema',Config(tmp_path,tmp_path/'runs',stub=False))
     assert 'CLI version mismatch' in result['error']
     assert result['answer'] is None

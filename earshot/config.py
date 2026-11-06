@@ -14,6 +14,7 @@ class Config:
     workers: int = 4
     stub: bool = True
     cli: str = "codex"
+    registration: Path | None = None
 
     def __post_init__(self):
         if self.timeout <= 0 or self.workers < 1:
@@ -28,6 +29,7 @@ def from_args(argv=None):
     parser.add_argument("--timeout", type=float, default=float(os.environ.get("EARSHOT_TIMEOUT", "180")))
     parser.add_argument("--workers", type=int, default=int(os.environ.get("EARSHOT_WORKERS", "4")))
     parser.add_argument("--cli", default=os.environ.get("EARSHOT_CLI", "codex"))
+    parser.add_argument("--registration", default=os.environ.get("EARSHOT_REGISTRATION"))
     parser.add_argument("--live", action="store_true")
     args = parser.parse_args(argv)
-    return Config(Path(args.workspace), Path(args.run_dir), args.model, args.reasoning_effort, args.timeout, args.workers, not args.live, args.cli)
+    return Config(Path(args.workspace), Path(args.run_dir), args.model, args.reasoning_effort, args.timeout, args.workers, not args.live, args.cli, Path(args.registration) if args.registration else None)

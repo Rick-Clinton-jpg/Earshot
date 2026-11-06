@@ -127,6 +127,7 @@ def test_runner_metadata_and_reuse_with_fake_subprocess(monkeypatch, tmp_path):
         events = [{'type': 'item.completed', 'item': {'type': 'agent_message', 'text': '{"ok": true}'}}]
         return subprocess.CompletedProcess(args, 0, '\n'.join(map(json.dumps, events)), '')
     monkeypatch.setattr(subprocess, 'run', fake)
+    monkeypatch.setattr(runner, 'verify_registration', lambda path: {})
     config = Config(tmp_path, tmp_path / 'run', stub=False)
     result = runner.run_agent('test', 'prompt', tmp_path / 'schema', config)
     assert result['answer'] == {'ok': True}
@@ -167,6 +168,7 @@ def test_runner_preserves_version_probe_failure(monkeypatch, tmp_path):
         assert args[-1] == '--version'
         raise FileNotFoundError('missing CLI')
     monkeypatch.setattr(subprocess, 'run', fake)
+    monkeypatch.setattr(runner, 'verify_registration', lambda path: {})
     config = Config(tmp_path, tmp_path / 'run', stub=False)
     result = runner.run_agent('test', 'prompt', tmp_path / 'schema', config)
     assert result['cli_version'] is None
@@ -180,6 +182,7 @@ def test_runner_preserves_timeout(monkeypatch, tmp_path):
             return subprocess.CompletedProcess(args, 0, runner.PINNED_CLI_VERSION + '\n', '')
         raise subprocess.TimeoutExpired(args, 180)
     monkeypatch.setattr(subprocess, 'run', fake)
+    monkeypatch.setattr(runner, 'verify_registration', lambda path: {})
     config = Config(tmp_path, tmp_path / 'run', stub=False)
     result = runner.run_agent('timeout', 'prompt', tmp_path / 'schema', config)
     assert result['exit_code'] is None
