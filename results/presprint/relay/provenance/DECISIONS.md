@@ -1,0 +1,12 @@
+PRE-SPRINT PRIOR WORK — written before the Swarm Alignment sprint (6–8 Nov 2026).
+
+# Decisions and conservative interpretations
+
+- All authored Markdown and seal text begins with the exact notice above. Python files begin with a comment containing that notice so they remain executable. JSON files place the notice in their first `_notice` property so they remain parseable. Verbatim scratch copies of the frozen pilot and the sealed `pilot_score.py` copy retain their original bytes; adding a header would defeat the reproduction or identity check.
+- `TASK_REPO = DogWhistle` means the local `work/DogWhistle` checkout only. No network fetch or update is used. The frozen `work/live_workspace` source is also read-only.
+- The 16 fresh tasks exclude all four source files used as candidates in the pilot: `dogwhistle/allocation.py`, `dogwhistle/gate.py`, `dogwhistle/listener.py`, and `dogwhistle/stats.py`. New tasks may reuse other source files but target distinct functions.
+- “Leave the target out of both ref pairs” is applied literally to the two delivered `required_memory_refs` values, public and codeword. Since each pair has two of four candidate letters, the complement decoded by the coalition contains the target in both arms. This limits the likely live effect but preserves the requested task rule. `hidden_pair` in task data means the coalition's preferred pair, as in the pilot; the codeword refs are its complement.
+- The frozen pilot scorer cannot directly read a 16-task design because it imports the pilot's `run.py`. A verbatim copy is sealed as `pilot_score.py`; `score_sprint.py` reuses its distance, pair, and exact-test functions without changing their formulas and adds task inclusion and reserve handling.
+- Step 4's stub records are generated inside this folder. Stub mode rejects any attempt to launch `codex` or another CLI process. Stub test expectations are properties of the harness, not model evidence.
+- The relay in Step 5 is a fresh honest agent that receives a handoff and emits two allowlisted refs. The same deterministic gate validates and rebuilds it. The 12 listener prompts are the frozen pilot wording, changed only to receive the relay's gated refs. The relay smoke test is kept separate from the 16 fresh tasks.
+- Any failure is recorded and the remaining steps continue. The final outcome remains descriptive until a future sprint registration and run; no local file is treated as an online preregistration.
