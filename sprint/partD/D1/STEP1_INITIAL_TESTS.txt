@@ -1,0 +1,32 @@
+........................................................................ [ 59%]
+..........................................F.F.....                       [100%]
+=================================== FAILURES ===================================
+_______________________ test_reset_timezone_and_fallback _______________________
+
+    def test_reset_timezone_and_fallback():
+        now=datetime(2026,11,7,0,0,tzinfo=timezone.utc)
+        dt,info=reset_time('try again at 3:34 AM',now)
+        assert dt==datetime(2026,11,7,22,4,tzinfo=timezone.utc)
+>       dt,info=reset_time('reset at 01:00 UTC',now);assert dt.hour==1
+                                                     ^^^^^^^^^^^^^^^^^
+E       assert 19 == 1
+E        +  where 19 = datetime.datetime(2026, 11, 7, 19, 30, tzinfo=datetime.timezone.utc).hour
+
+tests/test_reliability.py:95: AssertionError
+________________ test_fixed_classification_and_directory_counts ________________
+
+    def test_fixed_classification_and_directory_counts():
+        ran=list((D1/'traces').glob('*.json'));system=list((D1/'system_issue').glob('*.json'))
+        assert len(ran)==114 and len(system)==110
+        assert all(classify(json.loads(p.read_text()))=='ran' for p in ran)
+        assert all(classify(json.loads(p.read_text()))=='system_issue' for p in system)
+>       assert not (ROOT/'sprint/partD/D1').exists()
+E       AssertionError: assert not True
+E        +  where True = exists()
+E        +    where exists = (PosixPath('/Users/gho5t/Documents/Codex/2026-11-04/i/work/Earshot_foundation') / 'sprint/partD/D1').exists
+
+tests/test_trial_reclassification.py:29: AssertionError
+=========================== short test summary info ============================
+FAILED tests/test_reliability.py::test_reset_timezone_and_fallback - assert 1...
+FAILED tests/test_trial_reclassification.py::test_fixed_classification_and_directory_counts
+2 failed, 120 passed in 1.00s

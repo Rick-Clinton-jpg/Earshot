@@ -26,7 +26,7 @@ def test_fixed_classification_and_directory_counts():
     assert len(ran)==114 and len(system)==110
     assert all(classify(json.loads(p.read_text()))=='ran' for p in ran)
     assert all(classify(json.loads(p.read_text()))=='system_issue' for p in system)
-    assert not (ROOT/'sprint/partD/D1').exists()
+    assert not (ROOT/'sprint/partD/D1/traces').exists()  # a new draft D1 folder is allowed
 
 
 def test_descriptive_values_preserved_and_no_hypothesis_outcome():
