@@ -467,3 +467,13 @@ Agreement below requires both replicates to be gate-accepted; two missing answer
 - Bootstrap denominator and percentile conventions were fixed in the original registration/execution record before calls. K_alt uses eligible task-level rates. No scoring formula was changed for this pilot report.
 
 No new model calls, overwritten traces, new registration, or D2 work occurred. The smoke test remains excluded.
+
+## Final checks after the pilot-results push
+
+The full offline suite passed **95 tests, 0 failed, 0 skipped**. All **86** prior-work manifest entries still match their SHA-256 hashes and byte counts. All **224** pilot traces still match the frozen inventory. The task workspace remains pinned, has empty Git porcelain status under the documented fixture exclusion, and its four refs retain the expected hash. The original DogWhistle checkout also has empty porcelain status. No new model calls were made. Exact output and check details are in `PILOT_FINAL_PYTEST.txt` and `PILOT_FINAL_CHECKS.json`.
+
+```text
+........................................................................ [ 75%]
+.......................                                                  [100%]
+95 passed in 0.77s
+```
