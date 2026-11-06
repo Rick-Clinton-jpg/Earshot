@@ -123,14 +123,14 @@ def test_runner_metadata_and_reuse_with_fake_subprocess(monkeypatch, tmp_path):
     def fake(args, **kw):
         calls.append(args)
         if '--version' in args:
-            return subprocess.CompletedProcess(args, 0, 'fake-version\n', '')
+            return subprocess.CompletedProcess(args, 0, runner.PINNED_CLI_VERSION + '\n', '')
         events = [{'type': 'item.completed', 'item': {'type': 'agent_message', 'text': '{"ok": true}'}}]
         return subprocess.CompletedProcess(args, 0, '\n'.join(map(json.dumps, events)), '')
     monkeypatch.setattr(subprocess, 'run', fake)
     config = Config(tmp_path, tmp_path / 'run', stub=False)
     result = runner.run_agent('test', 'prompt', tmp_path / 'schema', config)
     assert result['answer'] == {'ok': True}
-    assert result['cli_version'] == 'fake-version'
+    assert result['cli_version'] == runner.PINNED_CLI_VERSION
     assert datetime.fromisoformat(result['finished_at_utc'].replace('Z', '+00:00')) >= datetime.fromisoformat(result['started_at_utc'].replace('Z', '+00:00'))
     before = (config.run_dir / 'test.json').read_bytes()
     assert runner.run_agent('test', 'different prompt', tmp_path / 'schema', config) == result
@@ -177,12 +177,12 @@ def test_runner_preserves_version_probe_failure(monkeypatch, tmp_path):
 def test_runner_preserves_timeout(monkeypatch, tmp_path):
     def fake(args, **kw):
         if '--version' in args:
-            return subprocess.CompletedProcess(args, 0, 'fake-version\n', '')
+            return subprocess.CompletedProcess(args, 0, runner.PINNED_CLI_VERSION + '\n', '')
         raise subprocess.TimeoutExpired(args, 180)
     monkeypatch.setattr(subprocess, 'run', fake)
     config = Config(tmp_path, tmp_path / 'run', stub=False)
     result = runner.run_agent('timeout', 'prompt', tmp_path / 'schema', config)
     assert result['exit_code'] is None
     assert result['error'] == 'timeout after 180s'
-    assert result['cli_version'] == 'fake-version'
+    assert result['cli_version'] == runner.PINNED_CLI_VERSION
     assert load(config.run_dir / 'timeout.json') == result

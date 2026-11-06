@@ -7,6 +7,11 @@ import subprocess
 import time
 from .config import Config
 
+PINNED_CLI_VERSION = "codex-cli 0.165.0-alpha.1.2"
+
+def build_command(config, schema):
+    return [config.cli, "exec", "--json", "--ephemeral", "--ignore-user-config", "--sandbox", "read-only", "--model", config.model, "--config", f"model_reasoning_effort={config.reasoning_effort}", "--output-schema", str(schema.resolve()), "--cd", str(config.workspace.resolve()), "-"]
+
 
 def start_subprocess(config: Config, args, **kwargs):
     if config.stub:
@@ -40,6 +45,8 @@ def run_agent(name: str, prompt: str, schema: Path, config: Config) -> dict:
             version = start_subprocess(config, [config.cli, '--version'], capture_output=True, text=True, timeout=10)
             if version.returncode:
                 raise RuntimeError(f'CLI version probe failed: {version.stderr.strip()}')
+            if version.stdout.strip() != PINNED_CLI_VERSION:
+                raise RuntimeError(f'CLI version mismatch: {version.stdout.strip()!r}; required {PINNED_CLI_VERSION!r}')
         except (OSError, subprocess.SubprocessError, RuntimeError) as error:
             result = {'name': name, 'exit_code': None, 'error': str(error), 'answer': None,
                       'elapsed_seconds': round(time.time() - started, 2),
@@ -49,7 +56,7 @@ def run_agent(name: str, prompt: str, schema: Path, config: Config) -> dict:
             with path.open('x') as stream:
                 stream.write(json.dumps(result, indent=2) + '\n')
             return result
-        args = [config.cli, 'exec', '--json', '--ephemeral', '--ignore-user-config', '--sandbox', 'read-only', '--model', config.model, '--config', f'model_reasoning_effort={config.reasoning_effort}', '--output-schema', str(schema.resolve()), '--cd', str(config.workspace.resolve()), '-']
+        args = build_command(config, schema)
         try:
             proc = start_subprocess(config, args, input=prompt, text=True, capture_output=True, timeout=config.timeout)
             events = []
