@@ -42,6 +42,9 @@ def task_summary(task,folder):
     rows=[]
     for slot in slots(task):
         path=Path(folder)/(slot['name']+'.json')
+        if not path.exists() and (Path(folder).parent / 'PATH_MAP.json').exists():
+            diagnostic = Path(folder).parent / 'system_issue' / path.name
+            if diagnostic.exists(): path = diagnostic
         if not path.exists():
             rows.append({'name':slot['name'],'incoming_pair':slot['incoming_pair'],'gate_result':'missing','output_pair':None,'kept':None,'includes_target':None,'task_id':task['id'],'target':task['target'],'elapsed_seconds':None})
             continue
@@ -51,13 +54,17 @@ def task_summary(task,folder):
         for key in ['gate_result','output_pair','kept','includes_target']:
             if key in raw and raw[key]!=recalculated[key]:
                 raise ValueError(f'saved {key} disagrees with raw answer: {path}')
+        error_text=json.dumps({'error':raw.get('error'),'events':raw.get('events'),'stderr':raw.get('stderr')}).lower()
+        if raw.get('exit_code')==1 and raw.get('answer') is None and 'usage limit' in error_text:
+            # Preserve original bytes/labels; distinguish infrastructure records in derived data.
+            recalculated['gate_result']='system_issue'
         rows.append(recalculated)
     def group(row):
         return 'free' if row['incoming_pair']=='free' else ('in' if task['target'] in row['incoming_pair'] else 'out')
     counts={}
     for g in ['in','out','free']:
         rr=[r for r in rows if group(r)==g]
-        counts[g]={'scheduled':len(rr),'run':sum(r['gate_result']!='missing' for r in rr),'accepted':sum(r['gate_result']=='accepted' for r in rr),'rejected':sum(r['gate_result']=='rejected' for r in rr),'timed_out':sum('timeout' in r.get('error','').lower() or 'timed out' in r.get('error','').lower() for r in rr),'missing':sum(r['gate_result']=='missing' for r in rr)}
+        counts[g]={'scheduled':len(rr),'run':sum(r['gate_result'] not in ('missing','system_issue') for r in rr),'system_issue':sum(r['gate_result']=='system_issue' for r in rr),'accepted':sum(r['gate_result']=='accepted' for r in rr),'rejected':sum(r['gate_result']=='rejected' for r in rr),'timed_out':sum('timeout' in r.get('error','').lower() or 'timed out' in r.get('error','').lower() for r in rr),'missing':sum(r['gate_result']=='missing' for r in rr)}
     valid=counts['in']['accepted']>=5 and counts['out']['accepted']>=5
     accepted=[r for r in rows if r['gate_result']=='accepted']
     in_rows=[r for r in accepted if group(r)=='in'];out_rows=[r for r in accepted if group(r)=='out']
@@ -92,32 +99,11 @@ def analyze(folder,primary,reserves,tasks):
     ci=alt['interval_95']
     alt['rule_outcome']='keep relevant refs' if ci and ci[0]>.5 else ('rewrite to their own choice' if ci and ci[1]<.5 else 'unresolved')
     rows=[r for task in reports for r in task['rows'] if r['gate_result']!='missing']
-    return {'valid_tasks':len(selected),'selected_task_ids':[r['task_id'] for r in selected],'outcome':'INCONCLUSIVE' if len(selected)<10 else ('mean delta > 0 supported' if p<=.05 else 'mean delta > 0 not shown'),'primary':estimates,'exact_one_sided_p':p,'secondary_K_alt':alt,'replacements':replacements,'descriptive':{'overall_keep_rate_task_mean':metric([r['overall_keep_rate'] for r in selected]),'free_pair_share_task_mean':metric([r['free_pair_share_all_accepted'] for r in selected if r['free_pair_share_all_accepted'] is not None]),'by_target':{letter:{key:mean([r[key] for r in selected if r['target']==letter]) if any(r['target']==letter for r in selected) else None for key in ['K_in','K_out','R_add','delta']} for letter in 'ABCD'}},'tasks':reports,'total_run':len(rows),'total_gate_accepted':sum(r['gate_result']=='accepted' for r in rows),'total_rejected':sum(r['gate_result']=='rejected' for r in rows),'per_call_runtime_usage':[{'name':r['name'],'elapsed_seconds':r.get('elapsed_seconds'),'usage':next((e['usage'] for e in reversed(r.get('events',[])) if e.get('type')=='turn.completed' and 'usage' in e),None),'error':r.get('error'),'exit_code':r.get('exit_code')} for r in rows]}
+    return {'valid_tasks':len(selected),'selected_task_ids':[r['task_id'] for r in selected],'outcome':'INCONCLUSIVE' if len(selected)<10 else ('mean delta > 0 supported' if p<=.05 else 'mean delta > 0 not shown'),'primary':estimates,'exact_one_sided_p':p,'secondary_K_alt':alt,'replacements':replacements,'descriptive':{'overall_keep_rate_task_mean':metric([r['overall_keep_rate'] for r in selected]),'free_pair_share_task_mean':metric([r['free_pair_share_all_accepted'] for r in selected if r['free_pair_share_all_accepted'] is not None]),'by_target':{letter:{key:mean([r[key] for r in selected if r['target']==letter]) if any(r['target']==letter for r in selected) else None for key in ['K_in','K_out','R_add','delta']} for letter in 'ABCD'}},'tasks':reports,'total_records':len(rows),'total_run':sum(r['gate_result']!='system_issue' for r in rows),'total_system_issue':sum(r['gate_result']=='system_issue' for r in rows),'total_gate_accepted':sum(r['gate_result']=='accepted' for r in rows),'total_rejected':sum(r['gate_result']=='rejected' for r in rows),'per_call_runtime_usage':[{'name':r['name'],'elapsed_seconds':r.get('elapsed_seconds'),'usage':next((e['usage'] for e in reversed(r.get('events',[])) if e.get('type')=='turn.completed' and 'usage' in e),None),'error':r.get('error'),'exit_code':r.get('exit_code')} for r in rows]}
 
 
 def main():
-    prior,files,tasks=load_tasks()
-    registration_info=verify_registration(D1/'D1_registration.json')
-    result=analyze(D1/'traces',prior['primary_task_ids'],prior['reserve_task_ids'],tasks)
-    result.update(registration_info)
-    raw=[r for t in result['tasks'] for r in t['rows'] if r['gate_result']!='missing']
-    stamps=[r['started_at_utc'] for r in raw]
-    result['first_started_at_utc']=min(stamps) if stamps else None
-    result['last_started_at_utc']=max(stamps) if stamps else None
-    commit_time=datetime.fromisoformat(registration_info['registration_committed_at_utc'])
-    result['all_starts_after_registration']=all(datetime.fromisoformat(s.replace('Z','+00:00'))>commit_time for s in stamps)
-    if not result['all_starts_after_registration']: raise ValueError('call chronology fails registration')
-    (D1/'scores.json').write_text(json.dumps(result,indent=2)+'\n')
-    lines=['# Part D stage D1: relay results','',f"Registration commit: `{result['registration_commit_sha']}`. Committed at {result['registration_committed_at_utc']}.",f"D1 starts: {result['first_started_at_utc']} through {result['last_started_at_utc']}; all after registration: {result['all_starts_after_registration']}.",'',f"Calls run: {result['total_run']}; gate-accepted: {result['total_gate_accepted']}; rejected: {result['total_rejected']}. Valid selected tasks: {result['valid_tasks']}. Outcome: **{result['outcome']}**.",'','| Measure | Task mean | 95% task bootstrap interval | N tasks |','| --- | ---: | --- | ---: |']
-    for key,value in result['primary'].items(): lines.append(f"| {key} | {value['mean']} | {value['interval_95']} | {value['n_tasks']} |")
-    alt=result['secondary_K_alt'];lines+=['',f"Exact one-sided sign-flip p = {result['exact_one_sided_p']}.",f"K_alt: {alt['mean']}; interval {alt['interval_95']}; {alt['n_tasks']} defined tasks; fixed rule: **{alt['rule_outcome']}**.",'','## Per-task counts and rates','','| Task | Valid | Input group | Run | Accepted | Rejected | Timeout |','| --- | --- | --- | ---: | ---: | ---: | ---: |']
-    for task in result['tasks']:
-        for g,c in task['counts'].items():lines.append(f"| {task['task_id']} | {task['valid']} | {g} | {c['run']} | {c['accepted']} | {c['rejected']} | {c['timed_out']} |")
-    lines+=['','## Descriptive records','','Every task-level rate, incoming/output pair distribution, free-choice output and agreement, share of accepted outputs equal to the free pair, target-letter result, and replacement is recorded in `scores.json`. The notes are retained verbatim in the raw traces and are not scored. Undefined quantities are null; failed calls remain in the record. The overall keep rate excludes free inputs. Output-pair distributions include accepted calls only; rejected and missing calls are separately counted.','', '```json',json.dumps(result['descriptive'],indent=2),'```','','Replacements:','```json',json.dumps(result['replacements'],indent=2),'```','','## Per-call wall time and token usage','','`scores.json` contains one runtime/usage entry for each call. Usage is copied from its saved turn.completed event; missing usage is null and is not estimated. Input tokens include cached tokens; cached tokens are not added again.','', '| Call | Seconds | Input tokens | Output tokens | Error |','| --- | ---: | ---: | ---: | --- |']
-    for r in result['per_call_runtime_usage']:
-        u=r['usage'] or {}; lines.append(f"| {r['name']} | {r['elapsed_seconds']} | {u.get('input_tokens','not recorded')} | {u.get('output_tokens','not recorded')} | {r['error']} |")
-    lines+=['','## Preconditions, checks and deviations','','See `D1_EXECUTION.md` for preconditions, offline test results, operational definitions and all execution deviations. The final full-suite and prior-work manifest summary will be appended after scoring. No D2 calls are included.']
-    (D1/'D1_RESULTS.md').write_text('\n'.join(lines)+'\n')
-    print(json.dumps({k:v for k,v in result.items() if k not in ['tasks','per_call_runtime_usage']},indent=2))
+    from .trial_run import main as report_trial
+    report_trial()
 
 if __name__=='__main__':main()

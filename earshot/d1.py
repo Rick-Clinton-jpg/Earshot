@@ -14,7 +14,7 @@ from .runner import run_agent, verify_registration, PINNED_CLI_VERSION
 
 ROOT = Path(__file__).resolve().parents[1]
 PRIOR = ROOT / 'results/presprint/relay/provenance'
-D1 = ROOT / 'sprint/partD/D1'
+D1 = ROOT / 'sprint/trial_run'
 PAIRS = [''.join(x) for x in combinations('ABCD', 2)]
 
 
@@ -64,6 +64,7 @@ def run_task(task, files, config):
 
 
 def main(argv=None):
+    raise RuntimeError('This trial is frozen. Live execution is disabled; sealed D1 requires a new registration and implementation.')
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--workspace',type=Path,required=True)
     parser.add_argument('--smoke',action='store_true')

@@ -69,6 +69,8 @@ Details for each part are fixed in a registration file committed before that par
 
 ## Results
 
+A D1 trial run was completed and is reported in `sprint/trial_run/`. The sealed D1 has not been run yet.
+
 ### Part D: Relays
 
 *Not run yet.*
@@ -101,6 +103,8 @@ These come from re-reading the pre-sprint traces on 6 November, during the sprin
 3. **Review minutes are a plan, not an action.** In the pre-sprint tests, receivers reported how they would split 60 minutes of review across files. Part B replaces this with real edits.
 
 ## Progress
+
+A D1 trial run was completed and is reported in `sprint/trial_run/`. The sealed D1 has not been run yet.
 
 - [ ] Part D registration committed
 - [ ] Part D runs and results
