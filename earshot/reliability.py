@@ -128,6 +128,11 @@ class AttemptRunner:
             row=json.loads(final.read_text())
             if row['prompt_sha256']!=digest:raise ValueError('saved final prompt mismatch')
             return row
+        stopped=self.folder/'stopped'/f'{name}.json'
+        if stopped.exists():
+            row=json.loads(stopped.read_text())
+            if row.get('prompt_sha256',digest)!=digest:raise ValueError('saved stopped prompt mismatch')
+            return row
         call=self.folder/'attempt_state'/name;call.mkdir(parents=True,exist_ok=True)
         pending=sorted(call.glob('attempt*.json'))
         n=len(pending)
@@ -144,7 +149,7 @@ class AttemptRunner:
             stop=self.control.before_launch()
             if stop:
                 path=self.folder/'stopped'/f'{name}.json'
-                row={'call':name,'administrative_status':stop,'at_utc':stamp(self.control.clock.now()),'attempts':n}
+                row={'call':name,'administrative_status':stop,'at_utc':stamp(self.control.clock.now()),'attempts':n,'prompt_sha256':digest}
                 if not path.exists():write_new(path,row)
                 return row
             n+=1

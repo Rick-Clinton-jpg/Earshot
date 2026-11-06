@@ -94,3 +94,14 @@ def test_reset_timezone_and_fallback():
     assert dt==datetime(2026,11,7,22,4,tzinfo=timezone.utc)
     dt,info=reset_time('reset at 01:00 UTC',now);assert dt.hour==1
     dt,info=reset_time('usage limit without a time',now);assert dt==now+timedelta(minutes=30) and info['parsed_reset_utc'] is None
+
+
+def test_stopped_before_spawn_is_reusable_without_resampling(tmp_path):
+    from datetime import datetime,timedelta,timezone
+    from earshot.reliability import AttemptRunner,Control
+    control=Control(tmp_path,datetime.now(timezone.utc)+timedelta(hours=1))
+    runner=AttemptRunner(tmp_path,{'patterns':[]},control,lambda *a:{'administrative_status':'stopped_by_cutoff'})
+    assert runner.run('stopped','same bytes')['administrative_status']=='stopped_by_cutoff'
+    runner.execute=lambda *a:pytest.fail('administratively stopped call must not launch')
+    assert runner.run('stopped','same bytes')['administrative_status']=='stopped_by_cutoff'
+    assert control.blocked is None
