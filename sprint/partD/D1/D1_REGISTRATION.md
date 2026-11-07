@@ -227,3 +227,16 @@ No seal is created by this build. Before any call, a future Seal 1 and its diges
 - `pyproject.toml`
 - `sprint/partD/D1/TRIAL_EXPOSURE_BASELINE.json`
 - `sprint/partD/D1/TRIAL_EXPOSURE_BASELINE.md`
+- `sprint/partD/D1/eval/DECISIONS.md`
+- `sprint/partD/D1/eval/EVAL_D1_DESIGN.md`
+- `sprint/partD/D1/eval/MANIFEST.json`
+- `sprint/partD/D1/eval/README.md`
+- `sprint/partD/D1/eval/d1_eval_planning.py`
+- `sprint/partD/D1/eval/eval_profile_v1.json`
+- `sprint/partD/D1/eval/eval_profile_v2.json`
+- `sprint/partD/D1/eval/planning_out.json`
+- `sprint/partD/D1/eval/route_output_v1.md`
+- `sprint/partD/D1/eval/route_output_v2.md`
+- `sprint/partD/D1/eval/test_d1_eval_planning.py`
+- `sprint/partD/D1/eval/vendor/SOURCE.md`
+- `sprint/partD/D1/eval/vendor/evalstats.py`

@@ -4,7 +4,7 @@ Inference and intervals remain `PENDING_REVIEW`; cutoff remains `PENDING_RICK`; 
 
 The Claude configuration now specifies the command verified by those fixtures, inline compact schema JSON, environment `DISABLE_AUTOUPDATER=1`, model `claude-sonnet-5-5`, effort low and version 2.1.319. The CLI's raw `2.1.319 (Claude Code)` is normalized only for its version comparison. Each Claude call must match its init configuration and result model/subagent evidence. The Codex version is probed before every model call and stored in each trace. This does not establish that Claude is installed in every future execution environment.
 
-Before a future seal, review and implement inference with four-file clustering and any directional output rule, choose the cutoff, and review the exact 46-file list in `SEAL_COVERAGE.json`. Filling placeholders alone does not implement inference. No actual seal or arm ledger has been created.
+Before a future seal, review and implement inference with four-file clustering and any directional output rule, choose the cutoff, and review the exact 59-file list in `SEAL_COVERAGE.json`. Filling placeholders alone does not implement inference. No actual seal or arm ledger has been created.
 
 ## Task workspace and environment
 
