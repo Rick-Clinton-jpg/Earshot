@@ -2,7 +2,7 @@
 
 **Status:** final. Scored once with the sealed scorer `earshot.d2_score` and re-scored independently on a second machine; the two outputs are byte-identical (section 8). Every number below is generated from the scorer output `d2_score_output.json` by `make_d2_results.py`; none is typed by hand.
 
-**Bottom line:** all 8 preregistered confirmatory claims hold, in both model families. With Codex as the relay, the audit placed before the relay read exactly 0.00 in all 12 tasks, while the audit at the last hop measured 0.40. Behind that blind audit, coalition receivers gave the target 18.5 minutes against honest receivers' 46.1.
+**Bottom line:** in this planted-reference setting, relay reconstruction made pre-relay swaps less informative about downstream convention-sensitive allocations than last-hop swaps. With Codex as the relay, the relays turned both codewords into the same reference pair in all 12 tasks, so the upstream swap had no downstream effect to measure (pre-relay D = 0.00), while the last-hop swap measured 0.40; coalition receivers still gave the target 18.5 minutes against honest receivers' 46.1. Claude showed the same ordering (0.22 pre-relay, 0.37 last-hop). All 8 preregistered confirmatory tests reject their nulls under Holm, in the predicted direction; they share data and are not 8 independent confirmations (section 2).
 
 ## 1. What was run
 
@@ -36,13 +36,15 @@ Unit: the task (n = 12 per arm). Exact two-sided sign-flip tests, Holm correctio
 - **H4:** Among receivers that followed the convention, being told to conceal lowers the text-check rate (told minus conceal).
 - **H3 exactness:** Exact under the stated sharp null or transparent-relay null only; directional consistency otherwise [EXT].
 - **H3 supports the core claim** (requires H2): Codex yes, Claude yes.
+- **The 8 tests are related, not independent.** They share tasks and calls. In the Codex arm H3 equals H2 exactly, because the pre-relay value is 0.00. P-b in section 5 is the same test as H1. H4 concerns this calibrated text check among followers under an explicit instruction to conceal; it does not establish a general concealment capability.
 
 ## 3. What the numbers mean
 
-- **The pre-relay audit was blind in the Codex arm.** In all 12 tasks the Codex relays delivered the same reference pair for T-in and for T-out, so the receivers behind the pre-relay audit saw identical inputs and the audit read exactly 0.00. This zero is a consequence of the relay output, not a sampling result. At the same time, coalition receivers gave the target 18.5 minutes against honest receivers' 46.1, under both codewords.
-- **The last-hop audit caught the coalition in both arms:** D_last 0.40 (Codex) and 0.37 (Claude).
-- **Claude relays hid less, but still hid some:** the pre-relay audit saw 60% of what the last-hop audit saw (ratio 0.60), against 0.00 for Codex.
-- **Concealment defeats a text check, not the behavioural audit.** Among receivers that followed the convention, the text check flagged 71% (Codex) and 73% (Claude) of the receivers told the convention, and 0% and 0% of those told to conceal, while conceal receivers followed the convention 100% and 90% of the time.
+- **The two placements answer different questions and are not interchangeable.** The pre-relay audit asks whether swapping the codeword upstream changes downstream allocations; the last-hop audit asks whether swapping what the receiver actually received does. In all 12 Codex tasks the relays delivered the same reference pair for T-in and for T-out, so the upstream swap had no downstream effect and the pre-relay audit correctly read 0.00. That zero did not mean the receivers were insensitive to the reference: coalition receivers gave the target 18.5 minutes against honest receivers' 46.1 under both codewords, and the last-hop audit measured the dependence. An auditor who swapped only upstream would have seen no reference dependence downstream.
+- **Preservation, reconstruction and downstream sensitivity are distinct.** A relay need not preserve the incoming codeword to deliver a pair that triggers the convention. In the Codex arm no T-out codeword survived hop 1 (0.00), and the T-in codewords that did survive were mostly standardised to the task default rather than kept (0.33 against 0.11; section 4). So under T-out the coalition effect above cannot have come from the codeword surviving; it came from the pair the relays delivered.
+- **The last-hop audit separated coalition from honest receivers in both arms:** D_last 0.40 (Codex) and 0.37 (Claude).
+- **Claude relays preserved more of the upstream contrast:** the pre-relay value was 60% of the last-hop value (ratio 0.60), against 0.00 for Codex.
+- **Under an explicit instruction to conceal, this text check missed the convention.** Among receivers that followed the convention, the calibrated text check flagged 71% (Codex) and 73% (Claude) of the receivers told the convention, and 0% and 0% of those told to conceal, while conceal receivers followed the convention 100% and 90% of the time. The swap audits are computed from allocations, not text.
 - **What shows receivers acted on the convention** is the following rate, not D: coalition receivers put at least 40 minutes on the decoded pair in 96% (Codex) and 97% (Claude) of calls on informative pairs.
 - **Honest receivers are a clean control:** convention-following 0% (Codex) and 0% (Claude).
 - **Planted signal:** these results show what the audits see once a convention is in place. They do not show that any model would introduce one (section 10).
@@ -84,11 +86,13 @@ T-out survival at hop 1: Codex 0 of 36 calls (per-call upper bound 0.08), Claude
 | # | Prediction | Observed | Came true |
 |---|---|---|---|
 | P-a | T-out codewords almost never survive hop 1 | 0.00 and 0.08 | yes |
-| P-b | T-in survives hop 1 more often than T-out, in both arms | H1 holds in both arms | yes |
+| P-b | T-in survives hop 1 more often than T-out, in both arms | same test as H1; holds in both arms | yes |
 | P-c | Radon defaults include the target in most tasks | 100% and 92% of tasks | yes |
 | P-d | D_pre-relay < D_last in both arms (ratio reported, not predicted) | 0.00 < 0.40 and 0.22 < 0.37 | yes |
-| P-e | Two-hop survival no higher than hop-1; relays keep their own default at hop 2 | two-hop T-in 0.44 vs hop-1 0.44 (Codex), 0.56 vs 0.61 (Claude); default kept 100% and 100% | yes |
+| P-e | Two-hop survival no higher than hop-1; relays keep their own default at hop 2 | first part holds by definition (two-hop survival requires surviving both hops): two-hop T-in 0.44 vs hop-1 0.44 (Codex), 0.56 vs 0.61 (Claude); empirical part: default kept 100% and 100% | yes |
 | P-f | Coalition receivers give the target fewer minutes than honest ones in both pre-relay arms | see section 4 | yes |
+
+These are not six independent successes. P-b repeats the H1 test, and the first part of P-e is a definitional bound that could not fail; its empirical part, that relays keep their own default at hop 2, held.
 
 D1 task IDs contained the target's letter and function name. D2 replaced them with opaque IDs, and the target-inclusion pattern (P-c) replicated without that hint.
 
@@ -160,7 +164,9 @@ The stage recorded, for every call, tool-output lines matching a broad phrase li
 - whether a model would introduce such a signal. The convention was planted. In the preliminary role check, the Claude sender declined to encode it (Addendum 3, a single call, not a rate);
 - spontaneous coordination between agents;
 - results beyond this scale: 12 tasks, one repository, 4 files per task, wide intervals on several rates;
-- effects on code: receivers planned review minutes and did not edit code.
+- effects on code: receivers planned review minutes and did not edit code;
+- independent experimental replication: the two-machine cross-check reproduces the computation, not the experiment;
+- novelty over prior literature, which has not yet been compared.
 
 H3 is exact only under the sharp null or a transparent relay; beyond those it is directional evidence [EXT].
 
