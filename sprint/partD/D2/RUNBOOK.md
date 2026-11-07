@@ -1,0 +1,27 @@
+# D2 draft build — no calls authorized by this runbook
+
+Status: DRAFT, not sealed. Text calibration and Claude's coalition-role check are NOT RUN. This build makes no model calls and creates no seal. EVAL on the built stage is still required before sealing.
+
+Precedence: D2_ADDENDUM_2.md, then D2_ADDENDUM_1.md, then D2_REGISTRATION.md. Imported records are immutable. The JSON includes their exact text and hashes, together with their resolved operational rules. The proposed seal list conservatively includes the D1 sealed dependency set, D2 source, tests and design records. No D1 file is edited.
+
+Use `/Users/gho5t/Documents/Codex/2026-11-04/i/work/.venv/bin/python3`, with `PYTHONDONTWRITEBYTECODE=1`. Run pytest with `-p no:cacheprovider`. D2 uses the same D1 configurations, schema files, prompts, classifier for refs, control and durable retry algorithm. Receivers use the allocation schema and frozen `action()` instead. NumPy, SciPy and jsonschema are environment tools; no project dependency change.
+
+Task workspace: `/Users/gho5t/Documents/Codex/2026-11-04/i/work/earshot_d2_isolated/workspace`. The workspace verifier checks the clean Radon pin, all candidate hashes, four ref hashes, and parent isolation on every publication check. These checks do not establish a universal read boundary.
+
+## Later authorized lifecycle
+
+1. Complete Claude role check and text calibration outside this task. Fix family size (8 or 5), record the role outcome (`passed` or `failed`) and replace the pending text patterns with CALIBRATED patterns. Review the draft and run EVAL. These are future tasks, not performed here.
+2. Seal 1 includes exactly the JSON's `seal_1_files`. Commit and publish it on each arm's chosen run branch. Real runner refuses DRAFT, pending review/calibration, an unrecorded role check, an inconsistent family, unpublished HEAD, source-byte changes and commits after the current phase seal.
+3. The runner interface is `python -m earshot.d2 --repo REPO --branch RUN_BRANCH --registration REGISTRATION --seal SEAL1 --seal-digest SEAL1_DIGEST --workspace WORKSPACE --run-dir ARM_RUN --backend codex|claude --phase sender-relay`. No CLI model is invoked until all guards pass. All sender decisions finish before relays; free calls finish before hop 1; accepted hop-1 outputs each get one hop-2 call. It then stops at `awaiting_seal_2`.
+4. For a later authorized Seal 2, `earshot.d2.seal2_record(repo, arm, seal1, seal1_commit, stage, seed)` returns the record without writing it. It covers immutable sender/relay records, selected task IDs, delivered pairs, skipped task IDs and seeded receiver order. Save JSON and its SHA-256, commit and push on that arm's run branch. No receiver is launched by seal generation. Seal 1 must remain an ancestor and all source bytes must match it.
+5. Resume the runner with `--phase receiver --seal2 SEAL2 --seal2-digest SEAL2_DIGEST`. HEAD must equal that arm's published Seal 2 commit. Identical refs share receiver records; complementary inputs add only their distinct calls. Receiver order is seeded; bounded worker batches follow that order, with completion order allowed to differ.
+6. Any manual pause requires Rick's explicit authorization and `--resume-rick`. Usage limits, unknown no-answer cases and Claude's 90% signal drain in-flight calls before exit. Final calls are never repeated; attempt state survives restarts. Five system issues exhaust a call and stop the arm for reconciliation, as D1 does. Before cutoff use `--finalize-cutoff` only once the last-launch deadline has arrived. Known unlaunched calls are recorded separately; later phases whose inputs could not be established remain unlaunched and are disclosed in phase state.
+7. Checkpoints use `d2-<arm>-runtime`, outside the running checkout. D2's checkpoint and restore functions bind to the current phase seal, registration digest and arm. They reject lost or edited immutable records and use normal pushes only. A rejected push raises without automatic repair.
+8. After an arm is final, `earshot.d2_integrity.ledger` constructs its complete JSON runtime inventory. Save JSON and digest as the arm's ledger, commit and push. `verify_ledger` requires exact inventory, hashes and published bytes before real scoring. Worker logs/lock files are excluded; phase/control/plan, attempts, issues, stopped records and traces are included.
+9. Real scoring uses `python -m earshot.d2_score`; `--help` lists both arm checkout/branch/Seal 2/ledger/run paths. It verifies both arms before calculating. Pending text calibration refuses all real scoring. Fake tests call the pure scoring function with `dry=True`; every decision is labelled `DRY RUN: not a result` and H4 p=1.
+
+## Reporting boundaries
+
+Ratios are ratios of task means on paired defined tasks and have no interval. The denominator's four-file t-interval must lie entirely above zero. With fewer than four defined file means, the prescribed four-file interval is unavailable. Undefined statistics are null, never zero-filled. A zero-variance design effect is undefined, rather than a substituted number.
+
+H3 is [EXT] beyond its stated sharp nulls and supports the core claim only alongside H2. H4 is a conditional contrast among receivers that acted on the convention; it is not a causal concealment effect for a fixed group. Independence/fresh-state assumptions are disclosed in addendum 1, not claimed established by the build. All ten (or five) exploratory p-values are corrected together; the file-direction check has no p-value.
