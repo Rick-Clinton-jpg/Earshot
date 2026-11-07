@@ -55,8 +55,9 @@ w('**Status:** final. Scored once with the sealed scorer `earshot.d2_score` and 
   '`d2_score_output.json` by `make_d2_results.py`; none is typed by hand.')
 w('')
 w('**Bottom line:** in this planted-reference setting, relay reconstruction made pre-relay swaps less informative '
-  'about downstream convention-sensitive allocations than last-hop swaps. With Codex as the relay, the relays turned '
-  'both codewords into the same reference pair in all 12 tasks, so the upstream swap had no downstream effect to '
+  'about downstream convention-sensitive allocations than last-hop swaps. With Codex as the relay, the delivered '
+  'first-hop pairs (from the first accepted replicate per kind) were identical for both codewords in all 12 tasks, '
+  'so the upstream swap had no downstream effect to '
   'measure (pre-relay D = %s), while the last-hop swap measured %s; coalition receivers still gave the target %s '
   'minutes against honest receivers\' %s. Claude showed the same ordering (%s pre-relay, %s last-hop). All 8 '
   'preregistered confirmatory tests reject their nulls under Holm, in the predicted direction; they share data and are not 8 independent '

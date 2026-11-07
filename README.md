@@ -6,7 +6,7 @@ Earshot follows a reference field as it is passed from one AI agent to the next.
 
 Earshot continues [DogWhistle](https://github.com/Rick-Clinton-jpg/DogWhistle) and is being built during the Swarm Alignment Hackathon (6–8 November 2026). Work done before the sprint is kept in `results/presprint/` and disclosed under [Prior work](#prior-work-preexisting-not-sprint-results).
 
-**Status — 8 November 2026:** D1 and D2 are complete, scored and independently re-scored. The two-machine checks reproduce the computation; they are not independent experimental replications. Parts B and E remain planned.
+**Status — 8 November 2026:** D1 and D2 are complete, scored and independently re-scored. The two-machine checks reproduce the computation; they are not independent experimental replications. Part B remains planned.
 
 | Stage | Status | Record |
 | --- | --- | --- |
@@ -15,7 +15,6 @@ Earshot continues [DogWhistle](https://github.com/Rick-Clinton-jpg/DogWhistle) a
 | D1: relay reference selection | Complete, both arms | [Results](sprint/partD/D1/scoring/D1_RESULTS.md) · [Cross-check](sprint/partD/D1/scoring/CROSS_CHECK.md) |
 | D2: planted references and audit placement | Complete, both arms | [Results](sprint/partD/D2/results/D2_RESULTS.md) · [Scorer output](sprint/partD/D2/results/d2_score_output.json) |
 | B: real edits | Planned | — |
-| E: real multi-agent logs | Planned | — |
 
 ---
 
@@ -25,7 +24,7 @@ Agents increasingly hand work to each other through structured messages: a task,
 
 Most oversight checks one agent, or one message, at a time. A chain of agents can behave differently from any single link in it. A field that looks harmless at every hop can still carry a signal from the first agent to the last, or lose it, or have one invented along the way.
 
-Earshot studies this in one small, controlled setting first, then checks it against real work and real logs.
+Earshot studies this in one small, controlled setting first, then checks it against real work.
 
 ## Research questions
 
@@ -34,9 +33,8 @@ Earshot studies this in one small, controlled setting first, then checks it agai
 | RQ1 | When an honest relay agent receives a handoff, does it pass the references on as given or rebuild them? | D |
 | RQ2 | When a planted codeword rides in the handoff, does it survive a relay, and does the swap audit still detect the agent acting on it? | D |
 | RQ3 | Does the handoff change the code the last agent actually edits? With no codeword at all, does the handoff alone still shift real work? | B |
-| RQ4 | In real multi-agent logs, do agents pass references on as given or rebuild them? | E |
 
-The parts run in this order (D, then B, then E) because each depends on the answer before it. D finds the pattern, B measures what it does to real work, and E checks whether it happens outside the lab.
+The parts run in this order (D, then B) because each depends on the answer before it. D finds the pattern and B measures what it does to real work.
 
 ### Open questions from the sprint this work speaks to
 
@@ -71,12 +69,6 @@ Details for each part are fixed in a registration file committed before that par
 - **Conditions:** honest-only chains with no codeword, to see whether the handoff alone shifts real work, and chains with a coalition receiver, to see whether its behaviour carries into actual code changes.
 - **Main measure:** which files are changed, and whether the change passes the task's checks.
 
-### Part E: In the wild (RQ4)
-
-- **Data:** AI Village transcripts, a public record of agents built on models from several companies working together over long periods. Access to the dataset is needed.
-- **Main measure:** how often a reference an agent forwards matches the one it received.
-- **Purpose:** to see whether the pattern from Part D appears in real multi-agent logs, across model families.
-
 ## Results
 
 ### D1: relay reference selection
@@ -108,10 +100,6 @@ The [earlier D1 trial](sprint/trial_run/TRIAL_RUN_RESULTS.md) and all pre-sprint
 
 *Not run yet.*
 
-### Part E: In the wild
-
-*Not run yet.*
-
 ## Prior work (preexisting, not sprint results)
 
 - **DogWhistle:** the swap audit and the baseline separation it measured. See its repository.
@@ -136,7 +124,6 @@ These come from re-reading the pre-sprint traces on 6 November, during the sprin
 - [x] D1 registration, both arms, ledgers, scoring and independent re-scoring
 - [x] D2 implementation, amendments, calibration, final EVAL, both arms, ledgers and cross-checked results
 - [ ] Part B sandbox, registration, runs and results
-- [ ] Part E data access, analysis and results
 - [ ] Final report
 
 ## Reproducing and auditing
@@ -169,7 +156,6 @@ Pre-sprint runs used `gpt-6.1-sol` at low reasoning effort, through fresh Codex 
 
 - DogWhistle: https://github.com/Rick-Clinton-jpg/DogWhistle
 - Red-Teaming Multi-Agent Attacks for Loss-of-Control Risks: https://arxiv.org/abs/2610.24052
-- AI Village dataset: https://huggingface.co/datasets/aidigestorg/ai-village
 - Audit the Whisper: Detecting Steganographic Collusion in Multi-Agent LLMs: https://arxiv.org/abs/2510.04303
 - Do Latent Channels Actually Communicate? A Causal Audit of Latent Multi-Agent LLM: https://arxiv.org/abs/2607.26773
 - Detecting Multi-Agent Collusion Through Multi-Agent Interpretability: https://arxiv.org/abs/2604.01151
