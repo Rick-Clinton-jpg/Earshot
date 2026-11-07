@@ -107,6 +107,7 @@ def main(argv=None):
     rows=[json.loads(x.read_text()) for x in (Path(args.run_dir)/'traces').glob('*.json')]
     stopped=[json.loads(x.read_text()) for x in (Path(args.run_dir)/'stopped').glob('*.json')]
     issues=[json.loads(x.read_text()) for x in (Path(args.run_dir)/'system_issue').glob('*.json')]
+    faults=[json.loads(x.read_text()) for x in (Path(args.run_dir)/'configuration_fault').glob('*.json')]
     # A task attempted only on the system-issue path still belongs in attempted-primary coverage.
     plan=json.loads((Path(args.run_dir)/'plan.json').read_text())['calls']
     stopped=[dict(plan[r.get('name',r.get('call'))],**r) for r in stopped]
@@ -115,7 +116,14 @@ def main(argv=None):
         if issue['name'] not in finished:
             row=dict(issue,administrative_status='system_issue_not_run',attempts=issue['attempt']);row.pop('classification',None);rows.append(row)
             finished.add(issue['name'])
+    for fault in faults:
+        name=fault.get('name')
+        if name in plan and name not in finished:
+            row=dict(fault,administrative_status='configuration_fault',attempts=fault['attempt']);row.pop('classification',None);rows.append(row);finished.add(name)
     report=arm_summary(tasks,rows+stopped)
+    report['configuration_faults']=faults
+    audited={(r.get('name'),r.get('attempt')):r for r in rows+issues+faults if 'exposure_audit' in r}
+    report['exposure_audits']=[{'name':r.get('name'),'attempt':r.get('attempt'),**r['exposure_audit']} for r in audited.values()]
     report['system_issue_attempt_count']=len(issues);report['system_issue_attempts']=issues
     report['stopped_by_cutoff']=stopped
     print(json.dumps(report,indent=2))

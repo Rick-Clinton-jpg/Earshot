@@ -6,11 +6,10 @@ from pathlib import Path
 import re
 import threading
 import time
-from zoneinfo import ZoneInfo
 from .gate import gate_handoff
 
 UTC=timezone.utc
-LOCAL=ZoneInfo('Asia/Calcutta')
+LOCAL=timezone(timedelta(hours=5,minutes=30))
 FINAL={'accepted','gate_rejected','timed_out','unclassified_failure'}
 
 
@@ -36,12 +35,25 @@ def error_text(record):
     for event in record.get('events',[]):
         if event.get('type')=='error':strings.append(str(event.get('message') or ''))
         if event.get('type')=='turn.failed':strings.append(str(event.get('error') or ''))
+    # Only error values and result text are inspected, never serialized rate-limit key names.
+    result=record.get('claude_result') or {}
+    if record.get('provider_error'):
+        for key in ['result','api_error_status','terminal_reason','stop_reason','subtype']:
+            value=result.get(key)
+            if value is not None:strings.append(('HTTP '+str(value)) if key=='api_error_status' and str(value).isdigit() else str(value))
+    for event in record.get('events',[]):
+        if event.get('type')=='system' and event.get('subtype')=='error':strings.append(str(event.get('message','')))
     return '\n'.join(strings)
 
 
 def classify(record,patterns):
     text=error_text(record)
+    if record.get('configuration_fault'):return 'configuration_fault',[]
     if record.get('timed_out') is True:return 'timed_out',[]
+    if record.get('provider_error'):
+        if record.get('usage_limit_detected'):return 'system_issue',['rate_limit']
+        matches=[p['id'] for p in patterns['patterns'] if re.search(p['regex'],text,re.I)]
+        return 'system_issue',matches or ['unclassified_no_answer']
     if record.get('exit_code')==0:
         _,status=gate_handoff(record.get('answer'),{'public_refs':['A','B']})
         return ('accepted' if status=='accepted' else 'gate_rejected'),[]
@@ -104,11 +116,11 @@ class Control:
     def stop(self,reason):
         with self.lock:
             self.blocked=reason;self.event({'event':'arm_stopped','reason':reason,'at_utc':stamp(self.clock.now())});self.persist()
-    def manual_pause(self,text,call,reason):
+    def manual_pause(self,text,call,reason,details=None):
         with self.lock:
             self.blocked='manual: '+reason
-            _,details=reset_time(text,self.clock.now())
-            self.event({'event':'manual_pause','reason':reason,'at_utc':stamp(self.clock.now()),'call':call,**details})
+            _,parsed=reset_time(text,self.clock.now())
+            self.event({'event':'manual_pause','reason':reason,'at_utc':stamp(self.clock.now()),'call':call,**parsed,**(details or {})})
             self.persist()
     def resume_by_rick(self):
         with self.lock:
@@ -125,7 +137,7 @@ class Control:
                 now=self.clock.now()
                 if now>=self.latest_launch:return 'stopped_by_cutoff'
                 if self.blocked:
-                    return 'paused_usage_limit' if self.blocked=='manual: usage limit' else ('paused_unclassified' if self.blocked.startswith('manual:') else 'arm_stopped')
+                    return {'manual: usage limit':'paused_usage_limit','manual: usage at 90%':'paused_usage_90','manual: unclassified no answer':'paused_unclassified'}.get(self.blocked,'arm_stopped')
                 if not self.pause_until:return None
                 if now>=self.pause_until:
                     self.pause_until=None;self.event({'event':'resume','at_utc':stamp(now)});self.persist();return None
@@ -183,18 +195,22 @@ class AttemptRunner:
             with self.control.lock:
                 kind,matches=classify(row,self.patterns)
                 row.update(name=name,attempt=n,prompt_sha256=digest,classification=kind,system_issue_matches=matches)
+                if kind=='configuration_fault':
+                    write_new(self.folder/'configuration_fault'/f'{name}-attempt{n}.json',row)
+                    self.control.stop('configuration fault: '+name)
+                    return {'call':name,'administrative_status':'configuration_fault','attempts':n}
                 if kind=='system_issue':
                     write_new(self.folder/'system_issue'/f'{name}-attempt{n}.json',row)
                     manual=set(matches)&set(self.patterns.get('manual_pause_matches',[]))
-                    if manual:
-                        reason='unclassified no answer' if 'unclassified_no_answer' in manual else 'usage limit'
-                        self.control.manual_pause(error_text(row),name,reason)
-                        return {'call':name,'administrative_status':'paused_unclassified' if reason=='unclassified no answer' else 'paused_usage_limit','attempts':n}
+                    if manual or row.get('usage_pause_reason'):
+                        reason=row.get('usage_pause_reason') or ('unclassified no answer' if 'unclassified_no_answer' in manual else 'usage limit')
+                        self.control.manual_pause(error_text(row),name,reason,{'quota_windows':row.get('quota_windows',{})})
+                        return {'call':name,'administrative_status':self.control.before_launch(),'attempts':n}
                     self.control.pause(error_text(row),name)
                     continue
                 # Even a failed process with an answer is final, but a limit still pauses the arm.
                 limits=[p['id'] for p in self.patterns['patterns'] if p['id'] in self.patterns.get('manual_pause_matches',[]) and re.search(p['regex'],error_text(row),re.I)]
-                if row.get('exit_code')!=0 and limits:
-                    self.control.manual_pause(error_text(row),name,'usage limit')
                 write_new(final,row)
+                if row.get('usage_pause_reason') or (row.get('exit_code')!=0 and limits):
+                    self.control.manual_pause(error_text(row),name,row.get('usage_pause_reason') or 'usage limit',{'quota_windows':row.get('quota_windows',{})})
                 return row

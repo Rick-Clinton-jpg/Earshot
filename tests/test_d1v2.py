@@ -8,6 +8,17 @@ from earshot.d1v2 import calls,run_stage,command,main,parse_stream
 from earshot.d1v2_score import task_summary,arm_summary,cross_arm,PAIRS
 from earshot.reliability import AttemptRunner,Control
 
+
+@pytest.fixture(autouse=True)
+def fake_version_only(monkeypatch):
+    import subprocess
+    original=subprocess.check_output
+    def check(args,*a,**kw):
+        if len(args)==2 and args[1]=='--version' and args[0] in ('fixture','codex'):
+            return 'fixture' if kw.get('text') else b'fixture'
+        return original(args,*a,**kw)
+    monkeypatch.setattr(subprocess,'check_output',check)
+
 TASK={'id':'fixture','role':'primary','request':'Locate the validation function.','target':'A'}
 FILES={c:f'fixture/{c}.py' for c in 'ABCD'}
 
@@ -92,7 +103,7 @@ def test_backend_cutoff_rechecked_after_publication(tmp_path,monkeypatch):
     now=datetime.now(timezone.utc)
     clock=SimpleNamespace(now=lambda:now,sleep=lambda _:None)
     control=Control(tmp_path,now+timedelta(seconds=180),clock=clock)
-    config={'backend':'codex','cli':'codex','model':'fixture','effort':'low','output_method':'codex_jsonl'}
+    config={'backend':'codex','cli':'codex','model':'fixture','effort':'low','output_method':'codex_jsonl','version':'fixture'}
     backend=Backend(config,tmp_path,tmp_path/'schema',lambda:None)
     monkeypatch.setattr('subprocess.Popen',lambda *a,**kw:pytest.fail('cutoff forbids launch'))
     assert backend('fixture','prompt',control)['administrative_status']=='stopped_by_cutoff'
@@ -113,7 +124,7 @@ def test_fake_process_records_timeout_and_reaps_group(tmp_path,monkeypatch):
     process=Process();killed=[]
     monkeypatch.setattr('subprocess.Popen',lambda *a,**kw:process)
     monkeypatch.setattr('os.killpg',lambda *a:killed.append(a))
-    backend=Backend({'backend':'codex','cli':'fixture','model':'fixture','effort':'low','output_method':'codex_jsonl'},tmp_path,tmp_path/'schema',lambda:None)
+    backend=Backend({'backend':'codex','cli':'fixture','model':'fixture','effort':'low','output_method':'codex_jsonl','version':'fixture'},tmp_path,tmp_path/'schema',lambda:None)
     result=backend('fixture','prompt',control)
     assert result['timed_out'];assert len(killed)==1;assert process.n==2
 
@@ -137,7 +148,7 @@ def test_fake_cli_usage_pause_drains_inflight_and_records_left(tmp_path,monkeypa
         return Process(index)
     monkeypatch.setattr('subprocess.Popen',popen)
     control=Control(tmp_path,datetime.now(timezone.utc)+timedelta(hours=1))
-    backend=Backend({'backend':'codex','cli':'fixture','model':'fixture','effort':'low','output_method':'codex_jsonl'},tmp_path,tmp_path/'schema',lambda:None)
+    backend=Backend({'backend':'codex','cli':'fixture','model':'fixture','effort':'low','output_method':'codex_jsonl','version':'fixture'},tmp_path,tmp_path/'schema',lambda:None)
     attempts=AttemptRunner(tmp_path,patterns,control,backend,reserve_at_launch=True)
     run_stage([TASK],FILES,attempts)
     assert len(launched)==3
@@ -154,3 +165,95 @@ def test_cutoff_finalization_without_model_launch(tmp_path):
     finalize_cutoff(tmp_path,control)
     row=json.loads((tmp_path/'stopped/never-launched.json').read_text())
     assert row['administrative_status']=='stopped_by_cutoff' and row['attempts']==0
+
+
+def test_manual_pause_between_precheck_and_spawn_blocks_launch(tmp_path,monkeypatch):
+    from earshot.d1v2 import Backend
+    control=Control(tmp_path,datetime.now(timezone.utc)+timedelta(hours=1))
+    original=control.before_launch;checks=[]
+    def interleaving():
+        status=original()
+        if not checks:
+            checks.append('first');control.manual_pause('usage limit','other-worker','usage limit')
+        return status
+    monkeypatch.setattr(control,'before_launch',interleaving)
+    monkeypatch.setattr('subprocess.Popen',lambda *a,**kw:pytest.fail('must not launch after another worker pauses'))
+    backend=Backend({'backend':'codex','cli':'fixture','model':'fixture','effort':'low','output_method':'codex_jsonl','version':'fixture'},tmp_path,tmp_path/'schema',lambda:None)
+    assert backend('call','fixture',control)['administrative_status']=='paused_usage_limit'
+
+
+def test_codex_version_probe_runs_for_every_call(tmp_path,monkeypatch):
+    from earshot.d1v2 import Backend
+    probes=[]
+    def version(*a,**kw):probes.append(a);return 'fixture'
+    monkeypatch.setattr('subprocess.check_output',version)
+    class Process:
+        pid=123456789;returncode=0
+        def communicate(self,*a,**kw):return b'',b''
+    monkeypatch.setattr('subprocess.Popen',lambda *a,**kw:Process())
+    backend=Backend({'backend':'codex','cli':'fixture','model':'fixture','effort':'low','output_method':'codex_jsonl','version':'fixture'},tmp_path,tmp_path/'schema',lambda:None)
+    control=Control(tmp_path,datetime.now(timezone.utc)+timedelta(hours=1))
+    for name in ['one','two']:
+        row=backend(name,'fixture',control);assert row['cli_version_raw']=='fixture'
+    assert len(probes)==2
+
+
+def test_claude_inline_schema_and_process_environment(tmp_path,monkeypatch):
+    from earshot.d1v2 import Backend
+    schema=tmp_path/'schema.json';schema.write_text('{"type": "object"}')
+    seen=[]
+    class Process:
+        pid=123456789;returncode=1
+        def communicate(self,data,**kw):assert data==b'fixture prompt';return b'',b'unknown fixture error'
+    def popen(args,**kw):seen.append((args,kw));return Process()
+    monkeypatch.setattr('subprocess.Popen',popen)
+    config={'backend':'claude','cli':'claude','model':'claude-sonnet-5-5','version':'2.1.319','argv':['claude','-p','--json-schema','{schema_json}'],'output_method':'claude_stream_json','env':{'DISABLE_AUTOUPDATER':'1'},'state_root':str(tmp_path/'state')}
+    backend=Backend(config,tmp_path,schema,lambda:None)
+    backend('call','fixture prompt',Control(tmp_path/'run',datetime.now(timezone.utc)+timedelta(hours=1)))
+    assert seen[0][0][-1]=='{"type":"object"}'
+    assert seen[0][1]['env']['DISABLE_AUTOUPDATER']=='1' and 'PATH' in seen[0][1]['env']
+
+
+def test_workspace_parent_siblings_are_launch_fault(tmp_path):
+    from earshot.d1v2 import verify_workspace
+    workspace=tmp_path/'workspace';workspace.mkdir();(tmp_path/'unrelated').write_text('fixture')
+    with pytest.raises(RuntimeError,match='parent must contain only'):verify_workspace(workspace,{})
+
+
+def test_later_pause_does_not_rewrite_earlier_pause_counts(tmp_path):
+    from earshot.d1v2 import record_drained_pause
+    control=Control(tmp_path,datetime.now(timezone.utc)+timedelta(hours=1))
+    (tmp_path/'plan.json').write_text('{"calls":{"one":{},"two":{}}}')
+    control.manual_pause('usage limit','one','usage limit');record_drained_pause(tmp_path,control)
+    original=json.loads((tmp_path/'pauses.json').read_text())[0]
+    control.resume_by_rick()
+    (tmp_path/'traces').mkdir();(tmp_path/'traces/one.json').write_text('test-only completed call')
+    control.manual_pause('usage limit','two','usage limit');record_drained_pause(tmp_path,control)
+    events=json.loads((tmp_path/'pauses.json').read_text())
+    assert events[0]==original
+    assert events[-1]['calls_finished']==['one'] and events[-1]['calls_left']==['two']
+
+
+def test_cutoff_does_not_schedule_unused_reserves(tmp_path):
+    control=Control(tmp_path,datetime.now(timezone.utc)+timedelta(seconds=179))
+    runner=AttemptRunner(tmp_path,{'patterns':[]},control,lambda *a:pytest.fail('no model launch'))
+    tasks=[TASK,dict(TASK,id='unused-reserve',role='reserve')]
+    run_stage(tasks,FILES,runner)
+    plan=json.loads((tmp_path/'plan.json').read_text())['calls']
+    assert len(plan)==15 and all('unused-reserve' not in name for name in plan)
+
+
+def test_cutoff_does_not_relabel_configuration_fault_as_unlaunched(tmp_path):
+    from earshot.d1v2 import finalize_cutoff
+    control=Control(tmp_path,datetime.now(timezone.utc)+timedelta(seconds=179))
+    (tmp_path/'plan.json').write_text('{"calls":{"fault":{"name":"fault"}}}')
+    (tmp_path/'configuration_fault').mkdir();(tmp_path/'configuration_fault/fault-attempt1.json').write_text('{"configuration_fault":["test-only mismatch"]}')
+    finalize_cutoff(tmp_path,control)
+    assert not (tmp_path/'stopped/fault.json').exists()
+
+
+def test_workspace_parent_check_uses_actual_symlink_target(tmp_path):
+    from earshot.d1v2 import verify_workspace
+    real=tmp_path/'real';real.mkdir();workspace=real/'workspace';workspace.mkdir();(real/'sibling').write_text('fixture')
+    alias_parent=tmp_path/'isolated-looking';alias_parent.mkdir();alias=alias_parent/'workspace';alias.symlink_to(workspace,target_is_directory=True)
+    with pytest.raises(RuntimeError,match='parent must contain only'):verify_workspace(alias,{})

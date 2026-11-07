@@ -16,6 +16,9 @@ from .prompts import relay_prompt
 from .integrity import require_ready,ensure_published,digest,git
 from .reliability import AttemptRunner,Control,stamp,write_new,replace_state
 from .d1v2_score import PAIRS,task_summary
+from .claude_stream import parse_claude,version_number,verify_project_state
+from .exposure import audit,ADAPTERS
+from .runtime_checkpoint import checkpoint
 
 
 def calls(task,files,group):
@@ -31,7 +34,8 @@ def command(config,workspace,schema):
         return build_command(Config(Path(workspace),Path('.'),model=config['model'],reasoning_effort=config['effort'],stub=False,cli=config['cli']),Path(schema))
     if config['backend']=='claude':
         # No guessed Claude flags: the reviewed configuration supplies the complete argv.
-        args=[s.replace('{workspace}',str(Path(workspace).resolve())).replace('{schema}',str(Path(schema).resolve())) for s in config['argv']]
+        schema_json=json.dumps(json.loads(Path(schema).read_text()),separators=(',',':'),ensure_ascii=False)
+        args=[s.replace('{workspace}',str(Path(workspace).resolve())).replace('{schema}',str(Path(schema).resolve())).replace('{schema_json}',schema_json) for s in config['argv']]
         if '-p' not in args:raise RuntimeError('Claude configuration must use -p')
         return args
     raise ValueError('unknown backend')
@@ -59,25 +63,37 @@ def parse_stream(stdout,method):
 
 class Backend:
     def __init__(self,config,workspace,schema,publication_check):
-        require_ready(config);self.config=config;self.workspace=workspace
+        require_ready(config);self.config=config;self.workspace=Path(workspace).resolve()
         self.argv=command(config,workspace,schema);self.publication_check=publication_check
     def preflight(self):
-        version=subprocess.check_output([self.config['cli'],'--version'],text=True,timeout=15).strip()
-        if version!=self.config['version']:raise RuntimeError('CLI version mismatch')
+        version=subprocess.check_output([self.config['cli'],'--version'],text=True,timeout=15,env={**os.environ,**self.config.get('env',{})}).strip()
+        normalized=version_number(version) if self.config['backend']=='claude' else version
+        self.version_raw=version
+        if normalized!=self.config['version']:raise RuntimeError('CLI version mismatch: '+version)
         if self.config['backend']=='claude' and not self.config.get('output_method_reviewed'):raise RuntimeError('Claude output method not reviewed')
     def __call__(self,name,prompt,control,reserve=None):
         self.publication_check()
+        try:
+            if self.config['backend']=='codex':self.preflight()
+            if self.config['backend']=='claude':
+                verify_project_state(self.workspace,self.config.get('state_root') or self.config.get('env',{}).get('CLAUDE_CONFIG_DIR') or os.environ.get('CLAUDE_CONFIG_DIR'))
+        except (RuntimeError,OSError,subprocess.SubprocessError) as error:
+            if reserve is not None:reserve()
+            return {'exit_code':None,'answer':None,'configuration_fault':[str(error)],'cli_version_raw':getattr(self,'version_raw',None)}
         while True:
             stop=control.before_launch()
             if stop:return {'administrative_status':stop,'call':name}
             with control.lock:
-                if control.pause_until:continue
+                if control.blocked or control.pause_until:continue
                 # Check directly before process creation, after all preflight/publication I/O.
                 if control.clock.now()>=control.latest_launch:return {'administrative_status':'stopped_by_cutoff','call':name}
                 if reserve is not None:reserve()
                 if control.clock.now()>=control.latest_launch:return {'administrative_status':'stopped_by_cutoff','call':name}
                 started=control.clock.now();tick=time.monotonic()
-                process=subprocess.Popen(self.argv,cwd=self.workspace,stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,start_new_session=True)
+                try:
+                    process=subprocess.Popen(self.argv,cwd=self.workspace,stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,start_new_session=True,env={**os.environ,**self.config.get('env',{})})
+                except OSError as error:
+                    return {'exit_code':None,'answer':None,'error':str(error),'started_at_utc':stamp(started),'process_launched':False}
                 break
         timeout=False
         try:stdout,stderr=process.communicate(prompt.encode(),timeout=180)
@@ -86,11 +102,18 @@ class Backend:
             try:os.killpg(process.pid,signal.SIGKILL)
             except ProcessLookupError:pass
             stdout,stderr=process.communicate()
-        answer,events=parse_stream(stdout.decode('utf-8',errors='replace'),self.config['output_method'])
-        return {'exit_code':process.returncode,'answer':answer,'events':events,
+        text=stdout.decode('utf-8',errors='replace')
+        if self.config['backend']=='claude':parsed=parse_claude(text,self.workspace,self.config,process.returncode)
+        else:
+            answer,events=parse_stream(text,self.config['output_method'])
+            parsed={'answer':answer,'events':events,'cli_version':self.config['version'],'cli_version_raw':self.version_raw}
+        record={'exit_code':process.returncode,**parsed,
                 'stdout':stdout.decode('utf-8',errors='replace'),'stderr':stderr.decode('utf-8',errors='replace'),
                 'started_at_utc':stamp(started),'ended_at_utc':stamp(control.clock.now()),
                 'wall_seconds':time.monotonic()-tick,'timed_out':timeout}
+        sources={a:(Path(self.workspace)/'dogwhistle'/a).read_text() for a in ADAPTERS if (Path(self.workspace)/'dogwhistle'/a).is_file()}
+        record['exposure_audit']=audit(record,self.workspace,sources)
+        return record
 
 
 def run_stage(tasks,files,attempts,workers=4):
@@ -98,6 +121,7 @@ def run_stage(tasks,files,attempts,workers=4):
     summaries={};results=[];missing=0
     for task in tasks:
         if task['role']=='reserve' and missing<=0:continue
+        if task['role']=='reserve' and hasattr(attempts.control,'latest_launch') and attempts.control.clock.now()>=attempts.control.latest_launch:break
         rows=[]
         if hasattr(attempts,'folder'):
             path=attempts.folder/'plan.json'
@@ -134,9 +158,9 @@ def record_drained_pause(folder,control):
     left=sorted(set(plan)-set(finished))
     events=json.loads((folder/'pauses.json').read_text())
     for event in reversed(events):
+        if event['event'] in ('resume_authorized_by_rick','resume'):break
         if event['event']=='manual_pause':
             event.update(calls_finished=finished,calls_left=left,drained_at_utc=stamp(control.clock.now()))
-            break
     replace_state(folder/'pauses.json',events)
 
 
@@ -144,13 +168,15 @@ def finalize_cutoff(folder,control):
     if control.clock.now()<control.latest_launch:raise RuntimeError('last-launch deadline has not arrived')
     plan=json.loads((folder/'plan.json').read_text())['calls']
     for name,metadata in plan.items():
-        if (folder/'traces'/f'{name}.json').exists() or (folder/'stopped'/f'{name}.json').exists():continue
+        if (folder/'traces'/f'{name}.json').exists() or (folder/'stopped'/f'{name}.json').exists() or list((folder/'configuration_fault').glob(f'{name}-attempt*.json')):continue
         attempts=len(list((folder/'attempt_state'/name).glob('attempt*.json')))
         write_new(folder/'stopped'/f'{name}.json',dict(metadata,administrative_status='stopped_by_cutoff',attempts=attempts,at_utc=stamp(control.clock.now())))
 
 
 def verify_workspace(workspace,data):
-    workspace=Path(workspace)
+    workspace=Path(workspace).resolve()
+    if set(p.resolve() for p in workspace.parent.iterdir())!={workspace.resolve()}:
+        raise RuntimeError('workspace parent must contain only the workspace')
     if git(workspace,'rev-parse','HEAD')!=data['source_commit'] or git(workspace,'status','--porcelain'):
         raise RuntimeError('task workspace is not clean at the registered commit')
     for path,expected in data['candidate_sha256'].items():
@@ -170,7 +196,7 @@ def main(argv=None):
     config=json.loads(Path(args.backend_config).read_text());require_ready(config)
     if config['backend']!=args.backend:raise RuntimeError('backend/config mismatch')
     check=lambda:ensure_published(repo,args.branch,args.seal,args.seal_digest)
-    check()
+    seal_info=check()
     seal=json.loads(Path(args.seal).read_text())
     sealed={e['path']:e['sha256'] for e in seal['files']}
     for path in [Path(args.registration),Path(args.backend_config)]:
@@ -194,20 +220,33 @@ def main(argv=None):
         if not planfile.exists():
             plan={'calls':{s['name']:{k:v for k,v in s.items() if k!='prompt'} | {'prompt_sha256':hashlib.sha256(s['prompt'].encode()).hexdigest()} for t in data['tasks'] if t['role']=='primary' for g in ['free','incoming'] for s in calls(t,data['candidate_files'],g)}}
             write_new(planfile,plan)
+        def save_checkpoint():
+            import sys
+            sys.stdout.flush();sys.stderr.flush()
+            info=checkpoint(repo,folder,args.backend,seal_info['seal_commit'],digest(args.seal),digest(args.registration))
+            print('runtime checkpoint published: '+info['branch']+' '+info['commit'])
+        if not (folder/'pauses.json').exists():write_new(folder/'pauses.json',[])
+        if not (folder/'control.json').exists():control.persist()
         if args.finalize_cutoff or control.clock.now()>=control.latest_launch:
-            finalize_cutoff(folder,control);print('stopped by the cutoff');return
+            finalize_cutoff(folder,control);save_checkpoint();print('stopped by the cutoff');return
         if args.resume_rick:control.resume_by_rick()
         if control.blocked:
-            print('paused: usage limit' if control.blocked=='manual: usage limit' else 'paused: '+control.blocked);raise SystemExit(75)
-        backend.preflight()
+            save_checkpoint()
+            print('paused: '+control.blocked.removeprefix('manual: '));raise SystemExit(75)
+        if config['backend']=='claude':
+            try:backend.preflight()
+            except (RuntimeError,OSError,subprocess.SubprocessError) as error:
+                write_new(folder/'configuration_fault'/'preflight.json',{'scope':'arm','configuration_fault':[str(error)],'cli_version_raw':getattr(backend,'version_raw',None)})
+                control.stop('configuration fault: preflight');save_checkpoint();raise SystemExit(78)
         patterns=json.loads(patternsfile.read_text())
         # Persist task metadata inside each final trace, not just the transient scheduler result.
         metadata={s['name']:{k:s[k] for k in ['task_id','group','incoming_pair','replicate']} for t in data['tasks'] for g in ['free','incoming'] for s in calls(t,data['candidate_files'],g)}
         def execute(name,prompt,ctl,reserve):return dict(backend(name,prompt,ctl,reserve),**metadata[name])
         attempts=AttemptRunner(folder,patterns,control,execute,reserve_at_launch=True)
         run_stage(data['tasks'],data['candidate_files'],attempts)
+        save_checkpoint()
         if control.blocked:
-            print('paused: usage limit' if control.blocked=='manual: usage limit' else 'paused: '+control.blocked)
+            print('paused: '+control.blocked.removeprefix('manual: '))
             raise SystemExit(75)
 
 if __name__=='__main__':main()
