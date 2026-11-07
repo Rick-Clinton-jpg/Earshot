@@ -561,7 +561,11 @@ def test_extra_receiver_set_excluded_from_primary_accuracy():
 def test_relay_cli_and_draft_guard(tmp_path,monkeypatch):
     import earshot.d2 as runner
     monkeypatch.setattr(runner,'D2Backend',lambda *a,**k:pytest.fail('draft instantiated a backend'))
-    args=['--repo',str(ROOT),'--branch','main','--registration',str(ROOT/'sprint/partD/D2/D2_registration.json'),
+    draft=json.loads((ROOT/'sprint/partD/D2/D2_registration.json').read_text())
+    draft['status']='DRAFT'
+    draft_path=tmp_path/'D2_registration_DRAFT.json'
+    draft_path.write_text(json.dumps(draft))
+    args=['--repo',str(ROOT),'--branch','main','--registration',str(draft_path),
           '--seal',str(tmp_path/'absent.json'),'--seal-digest',str(tmp_path/'absent.sha256'),
           '--workspace',DATA['workspace'],'--run-dir',str(tmp_path/'run'),'--backend','codex','--phase','relay']
     with pytest.raises(RuntimeError,match='draft registration'):runner.main(args)
