@@ -63,7 +63,9 @@ def test_readme_only_two_requested_insertions():
     before=subprocess.check_output(['git','show','6a07580:README.md'],cwd=ROOT,text=True)
     line='A D1 trial run was completed and is reported in `sprint/trial_run/`. The sealed D1 has not been run yet.'
     for heading in ['## Results','## Progress']:before=before.replace(heading+'\n',heading+'\n\n'+line+'\n',1)
-    assert (ROOT/'README.md').read_text()==before
+    # Preserve the trial-era edit check without freezing today's project status.
+    after=subprocess.check_output(['git','show','64a9d93:README.md'],cwd=ROOT,text=True)
+    assert after==before
 
 
 def test_legacy_reader_classifies_system_records_separately():

@@ -50,18 +50,18 @@ Point estimates are equal-weight task means. Intervals are 95% clustered Beta-Bi
 | Lift | −0.002 | −0.16 to 0.16 |
 | K_alt | −0.10 | −0.49 to 0.28 |
 
-The lift and K_alt differences are indistinguishable from noise at this sample size. These comparisons concern model-and-harness pairs, not models alone.
+The intervals for the lift and K_alt differences include zero and permit differences in either direction; these estimates do not establish equivalence. These comparisons concern model-and-harness pairs, not models alone.
 
 ## What D1 shows
 
-In both model families, honest relays nearly always place the target file in the pair they pass on. They keep an incoming pair mostly when that pair already contains the target, and almost never when it does not. Otherwise their outputs return toward their own default pair. That pattern is consistent with standardising: strongly for Codex, less consistently for Claude, whose answers also repeat less often. The handoff measurably changes outputs in these tasks (claim b), and only through pairs that include the target. For D2, this means a signal carried by the choice of references survives an honest hop mainly when it includes the target file.
+In both model families, honest relays nearly always place the target file in the pair they pass on. They keep an incoming pair mostly when that pair already contains the target, and almost never when it does not. Otherwise their outputs return toward their own default pair. That pattern is consistent with standardising: strongly for Codex, less consistently for Claude, whose answers also repeat less often. The handoff measurably changes outputs in these tasks (claim b), with the observed lift concentrated among pairs that include the target; this does not establish that target-out dependence is absent. For D2, this means a signal carried by the choice of references survives an honest hop mainly when it includes the target file.
 
 ## Predictable, not sanitising
 
 Standardising should not be read as cleaning. D1's honest relays are **predictable**:
 - Every default included the target file.
 - Defaults were stable in 10 of 12 tasks for Codex and 9 of 12 for Claude.
-- A non-default pair that includes the target passed through about 44% of the time (lift 0.44 and 0.43). In study.py it passed through almost every time: K_alt 12/12 and 11/12.
+- Relevant, non-default incoming pairs were kept at task-mean rates of 0.46 (Codex) and 0.56 (Claude), measured by K_alt. Target-in lift was 0.44 and 0.43; lift is a baseline-subtracted difference in output-matching rates, not a keeping probability. In study.py, K_alt was 12/12 and 11/12.
 - A pair that leaves out the target was almost always rewritten: K_out 0/72 and 2/72.
 
 So an honest relay narrows a channel carried by reference choice, but it does not close it. A coalition that knows how a relay behaves can choose encodings that survive the hop, and predictability is what makes such a channel designable. D2 tests whether a swap audit sees that channel, and where the audit has to sit to see it.
