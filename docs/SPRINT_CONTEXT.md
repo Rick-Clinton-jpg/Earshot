@@ -4,7 +4,7 @@ Prepared on 6 November 2026 from the sprint context supplied by the project owne
 
 Earshot continues DogWhistle. The two published pre-sprint tests and their code are prior work. Only work completed during the sprint should be claimed as the sprint contribution.
 
-The sprint research questions and plan are in the README (Parts D and B; research questions RQ1-RQ3). At preparation on 6 November, no sprint runs had been collected. Status update, 8 November 2026: D1 and D2 are complete, scored and cross-checked; their results are linked in the README. Parts B and E remain planned. The 16-task frozen review-minute design under `results/presprint/` is a pre-sprint preparation artifact, not the sprint protocol.
+The sprint research questions and plan are in the README (Parts D and B; research questions RQ1-RQ3). At preparation on 6 November, no sprint runs had been collected. Status update, 8 November 2026: D1 and D2 are complete, scored and cross-checked; their results are linked in the README. Part B remains planned. The 16-task frozen review-minute design under `results/presprint/` is a pre-sprint preparation artifact, not the sprint protocol.
 
 On 8 November 2026, after reviewing Part E, we decided the scope did not align with the direction, and the existing work showed more promise, so we'll retire Part E and continue.
 
