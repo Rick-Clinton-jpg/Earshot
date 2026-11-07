@@ -4,9 +4,11 @@ Inference method: PENDING_REVIEW
 
 Interval method: PENDING_REVIEW
 
+Cutoff: PENDING_RICK
+
 D1 studies how relays select references from task cues, in one repository with four candidate files and reference files of identical content. Broader claims about downstream effects belong to D2 and Part B.
 
-Both runners and the scorer refuse pending fields and DRAFT status. Claude command details and availability remain PENDING_RECON; cutoff remains PENDING_RICK. No model calls, study results, seal or ledger have been generated.
+Both runners and scoring refuse pending fields and DRAFT status. The Claude backend is checked against existing pinned fixtures; no new model call or seal was made.
 
 ## Question
 
@@ -16,37 +18,22 @@ How often do output reference pairs equal incoming pairs or the task’s gate-ac
 
 Designed after the trial run in sprint/trial_run/. That run shaped this design and its predictions; it is not part of D1. New function targets are used in the same four candidate files under Rick’s fallback authorization. This is not a new-repository or unseen-file validation.
 
-## Default rule
+## Tasks path
 
-A pair appearing in at least two of the three gate-accepted free-choice answers; undefined otherwise. An accepted pair is unordered.
+sprint/partD/D1/tasks.json
 
-## Validity
+## Schema path
 
-Default defined; at least 10 accepted incoming answers, including at least 5 target-in and 5 target-out. Gate rejections, timeouts and unclassified final failures are not accepted. System issues and cutoff stops are not agent outcomes. Replacement uses reserves in their listed order.
+earshot/sender.schema.json
 
-## Clustering
+## Patterns path
 
-The 12 primary tasks share four files and are not independent. Any inference and interval method must account for that dependence. No sign-flip tests, Holm decisions or bootstrap intervals are specified or computed in this draft.
+earshot/system_issue_patterns.json
 
-## Cross arm
+## Arms
 
-Task-ID pairing only among tasks selected as valid in both arms. Report overlap size and IDs; zero overlap is undefined. Point differences (Codex minus Claude) in K, C_out, K_alt and K_out use equal task weights. Model-and-harness pairs, not model-only comparisons. Inference and intervals remain pending.
-
-## Output pattern rule
-
-PENDING_REVIEW. No interval, significance test or automatic directional rule is implemented. A low K_alt alone is not a return to the default. Default-return wording requires the directly measured equals-default share. Descriptions concern output patterns only; the strongest permitted wording is consistent with standardising.
-
-## Cutoff rule
-
-Check after setup, version and publication checks, immediately before model-process launch. Do not launch at or after cutoff minus 180 seconds. Calls not launched are stopped_by_cutoff, separately from agent failures and timeouts. Await/reap all launched processes before analysis. A paused process exits; the next resume or explicit --finalize-cutoff records remaining scheduled calls without launching a model. Unused reserves are not falsely marked attempted.
-
-## Stopping
-
-Finish both arms or reach the fixed cutoff. At least eight selected valid tasks are needed for point-estimate reporting at cutoff; fewer yields INCONCLUSIVE coverage. This is not a hypothesis outcome. No cutoff extension after sealing.
-
-## Seals
-
-No seal is created by this build. Before any call, a future Seal 1 and its digest must be committed and pushed; local HEAD must be the seal commit and equal origin’s specified branch. Sealed bytes must match. Any later commit blocks calls. Each completed arm then needs a separately committed and pushed ledger plus digest covering every final trace, system-issue attempt, intent, stopped record and runtime state. Scoring checks exact coverage and every hash; it also checks the ledger’s Seal 1 digest link.
+- **codex:** {"model": "gpt-6.1-sol", "configuration": "sprint/partD/D1/codex_config.json"}
+- **claude:** {"model": "claude-sonnet-5-5", "configuration": "sprint/partD/D1/claude_config.json", "availability_evidence": "Pinned existing reconnaissance streams from c90d5c6411b9bcc035ae4cc2282cc144516e5351; no new availability probe or model call."}
 
 ## Design
 
@@ -59,6 +46,14 @@ No seal is created by this build. Before any call, a future Seal 1 and its diges
 - **workers_max:** 4
 - **call_timeout_seconds:** 180
 - **order:** Fixed primary order; all three free calls complete before incoming calls; reserves in listed order only for invalid primary tasks.
+
+## Default rule
+
+A pair appearing in at least two of the three gate-accepted free-choice answers; undefined otherwise. An accepted pair is unordered.
+
+## Validity
+
+Default defined; at least 10 accepted incoming answers, including at least 5 target-in and 5 target-out. Gate rejections, timeouts and unclassified final failures are not accepted. System issues and cutoff stops are not agent outcomes. Replacement uses reserves in their listed order.
 
 ## Denominators
 
@@ -82,13 +77,44 @@ No seal is created by this build. Before any call, a future Seal 1 and its diges
 - **default_stability:** as specified under denominators
 - **run_to_run_agreement:** as specified under denominators
 
+## Per call measures
+
+- output_pair
+- kept
+- includes_target
+- equals_default
+
+## Output pattern labels
+
+- outputs keep relevant incoming pairs
+- outputs do not keep them
+- unresolved
+
+## Output pattern rule
+
+PENDING_REVIEW. No interval, significance test or automatic directional rule is implemented. A low K_alt alone is not a return to the default. Default-return wording requires the directly measured equals-default share. Descriptions concern output patterns only; the strongest permitted wording is consistent with standardising.
+
+## Predictions for later review
+
+- Overall K below 0.5
+- C_out above 0.5
+
+## Clustering
+
+The 12 primary tasks share four files and are not independent. Any inference and interval method must account for that dependence. No sign-flip tests, Holm decisions or bootstrap intervals are specified or computed in this draft.
+
+## Cross arm
+
+Task-ID pairing only among tasks selected as valid in both arms. Report overlap size and IDs; zero overlap is undefined. Point differences (Codex minus Claude) in K, C_out, K_alt and K_out use equal task weights. Model-and-harness pairs, not model-only comparisons. Inference and intervals remain pending.
+
 ## Classifications
 
 - **accepted:** exit 0 and gate-accepted pair
-- **gate_rejected:** exit 0 with missing, unparsable or gate-invalid answer; final, never retried
+- **gate_rejected:** A successful, configuration-valid call with missing, unparsable or gate-invalid answer; final, never retried. Claude error results never enter the gate.
 - **timed_out:** 180-second timeout; final, never retried
 - **unclassified_failure:** non-zero exit with an answer and no classified final success; final and not accepted; list for Rick; never retry an answer
-- **system_issue:** non-zero/no-answer matching sealed patterns, or unknown no-answer process error; not an agent failure; save every attempt separately
+- **system_issue:** Codex non-zero/no-answer patterns or unknown no-answer errors; Claude provider errors enter this path even at exit zero and regardless of structured payload. Error payloads are preserved but never treated as final agent answers. Unknown errors manually pause. Missing init/result during an error is not silently a gate rejection.
+- **configuration_fault:** A conflicting present Claude init, unexpected modelUsage, spawned subagent, successful response missing required configuration evidence, failed CLI-version check or forbidden project state stops the arm. Preserve separately under configuration_fault/. Never an agent outcome or gate rejection.
 
 ## Pauses
 
@@ -98,12 +124,19 @@ No seal is created by this build. Before any call, a future Seal 1 and its diges
 - **other_system_issues:** Other recognized system issues use an explicit reset time if available, otherwise a 30-minute wait; retry the same prompt in a fresh process, max five total attempts. No wait crosses the last-launch deadline. At five, stop for Rick without resetting counters.
 - **timezone:** Reset text without a named zone is parsed in Asia/Calcutta (UTC+05:30). Save raw text and parsed UTC. Unknown/ambiguous zones use the recorded fallback. For manual pauses reset parsing is audit information, not permission to resume.
 - **crash:** An intent without a durable outcome blocks the arm for reconciliation; never silently repeat a possibly answered call.
+- **claude_usage_90:** After each call, read rate_limit_info fields, not serialized key names. If either five_hour or seven_day utilization is at least 0.90, retain that call outcome and manually pause with reason usage at 90%, storing both raw resetsAt values and UTC conversions. A non-allowed rate status on a failed call is a usage limit. Missing quota fields remain unavailable, never estimated. Only --resume-rick resumes.
 
-## Output labels
+## Cutoff rule
 
-- outputs keep relevant incoming pairs
-- outputs do not keep them
-- unresolved
+Check after setup, version and publication checks, immediately before model-process launch. Do not launch at or after cutoff minus 180 seconds. Calls not launched are stopped_by_cutoff, separately from agent failures and timeouts. Await/reap all launched processes before analysis. A paused process exits; the next resume or explicit --finalize-cutoff records remaining scheduled calls without launching a model. Unused reserves are not falsely marked attempted.
+
+## Stopping
+
+Finish both arms or reach the fixed cutoff. At least eight selected valid tasks are needed for point-estimate reporting at cutoff; fewer yields INCONCLUSIVE coverage. This is not a hypothesis outcome. No cutoff extension after sealing.
+
+## Seals
+
+No seal is created by this build. Before any call, a future Seal 1 and its digest must be committed and pushed; local HEAD must be the seal commit and equal origin’s specified branch. Sealed bytes must match. Any later commit blocks calls. Each completed arm then needs a separately committed and pushed ledger plus digest covering every final trace, system-issue attempt, intent, stopped record and runtime state. Scoring checks exact coverage and every hash; it also checks the ledger’s Seal 1 digest link.
 
 ## Limitations
 
@@ -112,9 +145,39 @@ No seal is created by this build. Before any call, a future Seal 1 and its diges
 - Candidate files are reused from the trial; only function targets and requests are new.
 - Adapter files containing agent-directed reference/decoding prompts are excluded as candidates. All 100 remaining candidate-line mentions are listed in TASK_AUDIT.md and tasks.json. Implementation and descriptive mentions remain.
 - Read-only tool access covers the repository, so agents may inspect excluded adapter files as other context. No claim of zero codeword exposure or isolated candidate-only access is made.
-- Read-only sandbox and fresh ephemeral sessions are specified for Codex. Claude model availability, sandbox, command, effort, output format and version remain unverified and PENDING_RECON.
 - Results concern reference-pair outputs in model-and-harness pairs. Broader downstream effects require D2 and Part B.
 - Operating-system scheduling and process cleanup can overrun a wall-clock deadline; no analysis starts until workers finish and child processes are reaped.
+- The saved Codex trial includes whole-file reads; the Claude checks include searches and partial reads. Future per-arm reading patterns are observed, not assumed constant. Model-and-harness comparisons include this tool-use difference.
+- The Claude isolation check denied its two tested outside-workspace requests; Codex reads are not fenced by its read-only sandbox. Those observations do not prove a universal Claude access boundary.
+- Large Claude tool outputs can become previews with the full result saved outside the workspace. The fixtures demonstrate truncation, not a universal inability to read every persisted file.
+- Claude init events include built-in plugins even with empty skills and disabled setting sources. Full init events are retained; no claim of zero ambient instructions is made.
+- Checkpoint publication occurs at orderly exits, not continuously; state newer than the last successful remote checkpoint can be lost.
+
+## Environment checks
+
+- **codex_version:** Probe codex --version before every model call and store raw/exact version in each trace.
+- **claude_init:** Each call requires model claude-sonnet-5-5, claude_code_version 2.1.319, exactly Glob/Grep/Read/StructuredOutput, empty mcp_servers/slash_commands/skills/additional_directories, dontAsk, and the canonical workspace cwd.
+- **claude_result:** Store subtype, is_error, api_error_status, terminal_reason, stop_reason, safety_stops, num_turns, duration_ms, total_cost_usd, usage, modelUsage, permission_denials, subagent_stats and result text. Require only the registered modelUsage key and zero spawned subagents. Missing evidence in a successful response is a configuration fault; an incomplete error stream is a system issue.
+- **parent_isolation:** The task workspace parent must contain only that workspace. This is an enforced setup check, not an exposure-based exclusion. It does not fence Codex reads elsewhere.
+- **project_state:** Before each Claude call, inspect the fixture-encoded project path under CLAUDE_CONFIG_DIR (if set) or ~/.claude. Allow only UUID session directories and their tool-results/ contents; memory/instruction files, non-session directories or symlinks stop the arm.
+- **fixture_provenance:** tests/fixtures/claude_recon/PROVENANCE.json records all ten original file hashes including MANIFEST.json; all nine manifest entries verified; existing three checks are fixtures, not D1 observations.
+
+## Exposure audit
+
+- **exclusions:** false
+- **rule:** Confirmed exposure requires an adapter path plus source content in a returned tool result: a path-and-line-prefixed content match, or a direct Read/cat/sed/head/tail/nl request attributed to the adapter with a matching nonblank source line. Filename listings alone do not count. Ambiguous combined reads and truncated relevant results are indeterminate unless visible attributed content already confirms exposure. No observed exposure means none detected in the saved visible outputs, not proof of no exposure. Requests outside the workspace, denials and output-storage paths are distinct observations, not exclusions.
+- **implementation:** earshot/exposure.py
+- **baseline:** sprint/partD/D1/TRIAL_EXPOSURE_BASELINE.json
+- **baseline_counts:** {"no_observed_exposure": 114}
+- **outside_paths:** Record explicit outside-path requests separately from tool errors, permission-denied events and outside output-storage paths. Shell expressions not fully interpreted are marked unresolved; this is not a complete OS-level access monitor.
+- **claude_reports:** Count tool results beginning with <persisted-output>; store permission_denials and system/permission_denied events. A persisted preview demonstrates truncation, not universal unreadability of the saved file.
+
+## Runtime checkpoints
+
+- **run_checkout:** HEAD remains at the published seal commit; do not push changes to the run branch while either arm is active.
+- **snapshot:** After draining workers on pause, finish or cutoff, copy every regular file in the arm folder into a separate Git worktree on d1-<arm>-runtime, with exact path/byte-count/SHA-256 manifest, backend, seal commit/digest and registration digest. Preserve immutable earlier records; reject symlinks, losses and changed immutable files. Commit/push without force and verify remote commit. A rejected push stops and preserves local files and worktree.
+- **restore:** Use a fresh clone at the seal commit, fetch its arm runtime branch, verify binding, all hashes and exact file set before copying to an absent destination. Resume only on Rick authorization; finished calls and retry counters survive. No model call is part of restore.
+- **limitation:** Exit snapshots protect successfully checkpointed state. A wipe during a call or before a successful checkpoint push can lose newer local state. They do not guarantee exactly-once execution across that loss; do not silently replay uncertain calls.
 
 ## Exact planned Seal 1 coverage
 
@@ -143,3 +206,24 @@ No seal is created by this build. Before any call, a future Seal 1 and its diges
 - `tests/test_d1v2_tasks.py`
 - `tests/test_integrity.py`
 - `tests/test_reliability.py`
+- `earshot/claude_stream.py`
+- `earshot/exposure.py`
+- `earshot/runtime_checkpoint.py`
+- `earshot/audit_trial_exposure.py`
+- `tests/test_claude_stream.py`
+- `tests/test_exposure.py`
+- `tests/test_runtime_checkpoint.py`
+- `tests/fixtures/claude_recon/MANIFEST.json`
+- `tests/fixtures/claude_recon/PROVENANCE.json`
+- `tests/fixtures/claude_recon/README.md`
+- `tests/fixtures/claude_recon/claude_help.txt`
+- `tests/fixtures/claude_recon/claude_version.txt`
+- `tests/fixtures/claude_recon/commands.json`
+- `tests/fixtures/claude_recon/isolation_call.jsonl`
+- `tests/fixtures/claude_recon/listener_call.jsonl`
+- `tests/fixtures/claude_recon/listener_prompt.txt`
+- `tests/fixtures/claude_recon/relay_call.jsonl`
+- `tests/fixtures/claude_recon/relay_prompt.txt`
+- `pyproject.toml`
+- `sprint/partD/D1/TRIAL_EXPOSURE_BASELINE.json`
+- `sprint/partD/D1/TRIAL_EXPOSURE_BASELINE.md`

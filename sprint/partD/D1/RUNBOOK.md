@@ -1,18 +1,31 @@
-# Draft D1 operation — DO NOT RUN THIS STUDY YET
+# Draft D1 operation — NOT SEALED, DO NOT RUN MODELS YET
 
-No model calls or study seals have been made. The commands below are documentation for later review, not actions performed during this build. `PENDING_REVIEW`, `PENDING_RECON`, `PENDING_RICK` and DRAFT status block both arms and scoring.
+Inference and intervals remain `PENDING_REVIEW`; cutoff remains `PENDING_RICK`; status is DRAFT. Both runners and scoring refuse these fields. There were no model calls during this build. The three Claude environment checks imported from `claude-recon` are existing fixtures, not D1 observations. Their source is pinned in `tests/fixtures/claude_recon/PROVENANCE.json`.
 
-Before a future run, review inference with the four-file clustering, review the complete Claude invocation and parser using documentation/help, choose the cutoff, and seal the exact list in `SEAL_COVERAGE.json`. Filling placeholders alone does not implement inference: the present scorer intentionally computes point estimates only. Changes to inference or the protocol must be reviewed and implemented before sealing. Check the actual Claude model identifier and availability; this build makes no availability claim.
+The Claude configuration now specifies the command verified by those fixtures, inline compact schema JSON, environment `DISABLE_AUTOUPDATER=1`, model `claude-sonnet-5-5`, effort low and version 2.1.319. The CLI's raw `2.1.319 (Claude Code)` is normalized only for its version comparison. Each Claude call must match its init configuration and result model/subagent evidence. The Codex version is probed before every model call and stored in each trace. This does not establish that Claude is installed in every future execution environment.
 
-The future seal format is an object with a `files` array of `{path, sha256}` entries relative to the Earshot repository. Its separate digest file contains the SHA-256 of the seal JSON bytes. Both must be committed and pushed in the seal commit; every launch requires HEAD to remain exactly that pushed commit. Do not commit runtime data or change branches during an active run. The task workspace must be external, clean at the pinned DogWhistle commit and contain the four verified reference files. Candidate bytes are verified before each model call.
+Before a future seal, review and implement inference with four-file clustering and any directional output rule, choose the cutoff, and review the exact 46-file list in `SEAL_COVERAGE.json`. Filling placeholders alone does not implement inference. No actual seal or arm ledger has been created.
 
-After those prerequisites, a later operator can start an independent shell worker, using actual absolute paths in these environment variables. This recipe was not executed:
+## Task workspace and environment
+
+Use an external clean clone at DogWhistle commit `1a4b471b3cfb4ed6d5def7c61356c5230af8c082`, with the verified four reference files. Its parent must contain only the workspace. This is an enforced setup requirement, not a post-hoc outcome exclusion. The isolated local workspace prepared without model calls is `/Users/gho5t/Documents/Codex/2026-11-04/i/work/earshot_d1_isolated/workspace`; rebuild the same pinned layout on another machine. The former workspace remains unchanged but its parent contains siblings and no longer qualifies for D1 launches.
+
+Claude's fixture-derived project key replaces non-alphanumeric characters in the absolute workspace path with hyphens. Before every Claude model call, check that key under the effective `CLAUDE_CONFIG_DIR/projects/` or `~/.claude/projects/`. Only UUID session directories and their `tool-results/` contents are allowed. Memory, instruction, transcript or other files, non-session directories and symlinks stop the arm. Full init events, including built-in plugins, are retained; these checks do not establish absence of all ambient instructions.
+
+The two isolation requests in the saved Claude check were denied. This is evidence about those requests, not a universal security proof. Codex's read-only sandbox does not fence reads to the workspace. All explicit outside-path requests and adapter exposure observations are report-only and never exclude a call. See the registration for the exact detection rule and the retrospective 114-call baseline. Large Claude tool outputs may be previews; persisted storage paths are recorded separately from read requests and denials.
+
+## Future sealed worker
+
+A future Seal 1 JSON has a `files` array `{path, sha256}` relative to Earshot. A separate digest file contains the SHA-256 of the seal JSON bytes. Commit and push both in the seal commit. HEAD must remain exactly that commit and equal the specified remote branch throughout either arm's calls. Do not push ledger/report changes to that branch while either arm is active. Runtime snapshots use separate branches.
+
+After prerequisites are complete, an operator can use this documented recipe. It was not executed:
 
 ```sh
-repo=/absolute/path/to/Earshot
-workspace=/absolute/path/to/pinned-task-workspace
+repo=/absolute/path/to/sealed-Earshot
+workspace=/absolute/path/to/isolated-parent/workspace
 python=/absolute/path/to/venv/bin/python
 arm=codex
+cd "$repo"
 mkdir -p "$repo/sprint/partD/D1/$arm"
 nohup "$python" -m earshot.d1v2 \
   --repo "$repo" --branch main --backend "$arm" \
@@ -24,16 +37,39 @@ nohup "$python" -m earshot.d1v2 \
   > "$repo/sprint/partD/D1/$arm/worker.log" 2>&1 < /dev/null &
 ```
 
-Run from the Earshot repository with the environment's package import path configured. Use a separate process and arm directory for Claude after its configuration is verified. Each arm has an exclusive OS worker lock. A shared usage account can cause both arms to hit limits; each process enforces its own arm pause when it observes the error. There is no claim of a single global pause bus across two separate processes/accounts.
+Use a separate process and arm directory for Claude. Each arm has an exclusive worker lock and independent pause state; their accounts differ. The final cutoff and pause check share the same lock with model-process launch, preventing a worker from launching after another worker has set a pause.
 
-A usage/rate-limit error or unknown no-answer error saves a system-issue attempt and sets durable manual pause state. The worker drains all model processes already in flight, saves their outcomes, adds finished/left call lists to the triggering pause record, prints `paused: usage limit` (or the unclassified-pause reason) and exits. A normal restart stays paused. Only after Rick's explicit instruction, add `--resume-rick` to the same invocation. Final traces are reused; retry counters and prompt hashes persist. Never remove a trace, reset a counter or clear state to get past a refusal. Five system issues or a crash intent lacking an outcome require reconciliation; the total attempt cap is not reset by resume.
+## Outcomes and pauses
 
-Other recognized system issues retain the registered reset-time/30-minute automatic retry rule. Pauses wait in bounded increments and never pass the last-launch deadline. There is no percentage-quota reader and no 10% pause.
+Accepted answers, gate rejections and timeouts are final and are never re-attempted. Non-zero exits with answers remain final and unaccepted. Claude provider errors are system issues even at exit zero; their structured payload is not treated as a successful answer. Conflicting configuration evidence is saved under `configuration_fault/`, stops the arm and never becomes an agent outcome. An incomplete error stream without an init/result does not silently become a gate rejection. Successful configuration-valid results lacking a valid structured answer remain gate rejections.
 
-The latest launch is strictly before cutoff minus 180 seconds, checked immediately before process creation after setup/version/publication checks. Timeout is 180 seconds. Process-tree termination and OS scheduling can add wall-clock cleanup time; analysis must wait for all workers and children to finish. No promise of exact OS cleanup timing is made.
+A usage/rate-limit error or unknown no-answer error saves an attempt and manually pauses. After each Claude call, either quota utilization at or above 0.90 also manually pauses, with distinct reason `usage at 90%`, retaining that call's outcome and both available reset times. Quota decisions use values, not key-name text matching. Missing readings are unavailable; there is no invented quota estimate. Codex has no percentage reader.
 
-An exited worker cannot write files at a future cutoff. At or after the last-launch deadline, invoke the same command with `--finalize-cutoff` (no resume permission is needed for recording administrative stops). A resume command at that time also finalizes cutoff records without starting models. This records every remaining scheduled primary or used-reserve call as `stopped_by_cutoff`; unused reserves are excluded. It is necessary to run this administrative step before sealing an interrupted arm's ledger. Do not move the cutoff.
+Workers launch no new calls after a pause, drain in-flight processes and save their outcomes. Pause records include the triggering call, time, finished and left call lists, and raw/parsed reset information. Time-based resets do not authorize resumption of a manual pause. A plain restart stays paused. Only after Rick authorizes it, add `--resume-rick` to the same invocation. Final traces, prompt hashes and counters survive. Other recognized system issues retain the bounded reset-time/30-minute retry rule; five attempts stop the arm. Never reset counters or delete outcomes to bypass a refusal.
 
-Before scoring, construct each arm ledger from the exact JSON files in `traces/`, `system_issue/`, `attempt_state/`, `stopped/` and the existing `plan.json`, `pauses.json`, `control.json`. Include `seal_sha256` pointing to Seal 1 and a `files` list `{path, sha256}` relative to that arm directory. Commit/push the runtime files, ledger and its separate digest. Scoring checks the published ledger and exact inventory, including edited/extra traces. `worker.lock` and diagnostic `worker.log` are not result records and are outside the ledger inventory. No ledger has been created for this draft.
+Check cutoff after setup/version/publication work and immediately before model-process creation. Do not launch at or after cutoff minus 180 seconds. Timeout is 180 seconds; OS scheduling and process cleanup may add wall time. Await and reap all launched processes before analysis. An exited paused worker cannot write at a future cutoff: its next resume, or the same invocation with `--finalize-cutoff`, records remaining scheduled calls without launching models. Unused reserves are excluded. Never extend the cutoff.
 
-The scorer's CLI accepts explicit repository, branch, registration, original seal/digest, ledger/digest and arm directory paths. `cross_arm` pairs selected valid task IDs and reports overlap and point differences only. Undefined quantities remain null; it does not fabricate unavailable comparisons.
+## Runtime checkpoints and restore
+
+At orderly pause, finish or cutoff, after draining workers and flushing output, the runner snapshots every regular file in its arm folder. It creates a separate Git worktree on `d1-codex-runtime` or `d1-claude-runtime`, with a manifest binding the snapshot to its backend, seal commit, seal digest and registration digest. The manifest records each path, byte count and SHA-256. Earlier immutable records may neither disappear nor change. Mutable control/log files can advance. Symlinks are refused. Snapshot commits are pushed without force and the published branch head is verified before success is reported. A rejected push stops; the local run folder and checkpoint worktree are preserved. The sealed run checkout's HEAD never changes.
+
+The snapshot covers file bytes at capture time; the worker log can subsequently receive the checkpoint-publication or exit message. Those diagnostic additions do not change saved outcomes. Checkpoints at orderly exits do not guarantee recovery of a call lost during a sudden container wipe or before a successful push. If any call's completion is uncertain, stop for reconciliation rather than silently sampling it again.
+
+For restore, make a fresh clone and detach at the original seal commit. Rebuild/verify the task workspace. In that clone, use the existing original seal files and an absent arm destination:
+
+```sh
+"$python" -m earshot.runtime_checkpoint restore \
+  --repo "$repo" --branch main --arm "$arm" \
+  --registration "$repo/sprint/partD/D1/D1_registration.json" \
+  --seal "$repo/sprint/partD/D1/SEAL1.json" \
+  --seal-digest "$repo/sprint/partD/D1/SEAL1.sha256" \
+  --run-dir "$repo/sprint/partD/D1/$arm"
+```
+
+Restore verifies every hash, exact saved file inventory and seal/backend binding before copying into the absent destination. It never overwrites earlier local traces. Only resume with `--resume-rick` on Rick's instruction; final answers are reused, and system-issue retries retain the earlier attempt count. Restoring a completed or cutoff run does not authorize more calls.
+
+## Final ledgers and scoring
+
+After both arms stop, create each ledger over the exact JSON runtime inventory: `traces/`, `system_issue/`, `configuration_fault/`, `attempt_state/`, `stopped/`, plus existing `plan.json`, `pauses.json` and `control.json`. Include `seal_sha256` and the `{path, sha256}` list relative to the arm directory. Commit/push the runtime files, ledger and separate digest. The checkpoint manifest covers the entire captured folder; the scoring ledger intentionally covers the result/control JSON inventory, as before. Diagnostic `worker.lock` and `worker.log` are outside that ledger.
+
+The scorer accepts explicit repository, branch, registration, original seal/digest, ledger/digest and arm-directory arguments. It checks all hashes and exact ledger inventory and reports configuration faults and exposure observations separately. `cross_arm` pairs selected valid task IDs and reports overlap and point differences only. No inferential method or interval is implemented pending review.

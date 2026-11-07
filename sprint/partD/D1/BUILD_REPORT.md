@@ -1,5 +1,7 @@
 # D1 draft build report — no model calls, no seal
 
+Historical report for commit 84a1f6a. Addendum 2 changes and current checks are reported in `ADDENDUM2_REPORT.md`.
+
 This builds a reviewable draft of the next D1. It does not produce experimental observations or establish a D1 result. Synthetic relay and CLI responses occur only in offline tests, not in study traces.
 
 ## Changes
