@@ -1,4 +1,4 @@
-# Draft D1 operation — NOT SEALED, DO NOT RUN MODELS YET
+# D1 operation — REGISTERED; cutoff 2026-11-09T06:30:00Z (12:00 IST); no run started. The unchanged draft-era body below is historical; the filled registration is authoritative.
 
 Inference and intervals remain `PENDING_REVIEW`; cutoff remains `PENDING_RICK`; status is DRAFT. Both runners and scoring refuse these fields. There were no model calls during this build. The three Claude environment checks imported from `claude-recon` are existing fixtures, not D1 observations. Their source is pinned in `tests/fixtures/claude_recon/PROVENANCE.json`.
 

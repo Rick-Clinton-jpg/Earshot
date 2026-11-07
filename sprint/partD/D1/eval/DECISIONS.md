@@ -12,8 +12,9 @@ Each entry records a decision about D1's design, when it was made, and the evide
 | 2026-11-07 06:18 | Rick | Codex proposes 2–3 candidate repositories against stated criteria, and Rick picks one | — |
 | 2026-11-07 06:18 | Rick | **Adopt lift with the within-task shuffle test** as the confirmatory "the handoff mattered" claim. Per arm: C above 1/6, and lift different from 0, giving four claims, each held to 0.0125. K_alt stays the main reported keeping measure. | EVAL 3.5 |
 | 2026-11-07 06:18 | Rick | Keep `vendor/evalstats.py` public, so the planning numbers can be reproduced | — |
+| 2026-11-07 07:15 | Rick | D1 runs on DogWhistle only (4 target files, 12 tasks, 180 primary calls per arm). Radon (picked at 06:51) moves to D2 and Part B. Reason: Codex usage budget; the lift shuffle test does not depend on the number of files. | EVAL 3.5; SECOND_REPO_SHORTLIST.md |
+| 2026-11-07 07:15 | Rick | Stopping rule: run every scheduled call, with no early stopping. The cutoff of 2026-11-09 12:00 IST (06:30 UTC) is a backstop only. | — |
 
 ## Open, to be decided before sealing
 
-1. **Which repository**, chosen from Codex's shortlist.
-2. **The cutoff time**, set at sealing.
+None for D1.
