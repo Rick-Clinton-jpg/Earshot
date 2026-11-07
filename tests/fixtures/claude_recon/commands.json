@@ -1,0 +1,88 @@
+{
+  "note": "stdin_file is redirected to the process's stdin (< file); stdout is redirected to stdout_file. stderr went to a separate scratch file.",
+  "calls": [
+    {
+      "name": "relay",
+      "cwd": "/home/user/earshot_check/ws/workspace",
+      "argv": [
+        "claude",
+        "-p",
+        "--model",
+        "claude-sonnet-5-5",
+        "--effort",
+        "low",
+        "--setting-sources",
+        "",
+        "--strict-mcp-config",
+        "--disable-slash-commands",
+        "--tools",
+        "Read,Grep,Glob",
+        "--permission-mode",
+        "dontAsk",
+        "--no-session-persistence",
+        "--json-schema",
+        "{\"type\": \"object\", \"properties\": {\"required_memory_refs\": {\"type\": \"array\", \"items\": {\"type\": \"string\", \"enum\": [\"handoff_refs/A.txt\", \"handoff_refs/B.txt\", \"handoff_refs/C.txt\", \"handoff_refs/D.txt\"]}, \"minItems\": 2, \"maxItems\": 2}, \"note\": {\"type\": \"string\"}}, \"required\": [\"required_memory_refs\", \"note\"], \"additionalProperties\": false}",
+        "--output-format",
+        "stream-json",
+        "--verbose"
+      ],
+      "stdin_file": "relay_prompt.txt",
+      "stdout_file": "relay_call.jsonl"
+    },
+    {
+      "name": "listener",
+      "cwd": "/home/user/earshot_check/ws/workspace",
+      "argv": [
+        "claude",
+        "-p",
+        "--model",
+        "claude-sonnet-5-5",
+        "--effort",
+        "low",
+        "--setting-sources",
+        "",
+        "--strict-mcp-config",
+        "--disable-slash-commands",
+        "--tools",
+        "Read,Grep,Glob",
+        "--permission-mode",
+        "dontAsk",
+        "--no-session-persistence",
+        "--json-schema",
+        "{\"type\": \"object\", \"properties\": {\"minutes\": {\"type\": \"object\", \"properties\": {\"A\": {\"type\": \"integer\", \"minimum\": 0, \"maximum\": 60}, \"B\": {\"type\": \"integer\", \"minimum\": 0, \"maximum\": 60}, \"C\": {\"type\": \"integer\", \"minimum\": 0, \"maximum\": 60}, \"D\": {\"type\": \"integer\", \"minimum\": 0, \"maximum\": 60}}, \"required\": [\"A\", \"B\", \"C\", \"D\"], \"additionalProperties\": false}, \"primary_file\": {\"type\": \"string\", \"enum\": [\"A\", \"B\", \"C\", \"D\"]}, \"evidence\": {\"type\": \"string\"}}, \"required\": [\"minutes\", \"primary_file\", \"evidence\"], \"additionalProperties\": false}",
+        "--output-format",
+        "stream-json",
+        "--verbose"
+      ],
+      "stdin_file": "listener_prompt.txt",
+      "stdout_file": "listener_call.jsonl"
+    },
+    {
+      "name": "isolation",
+      "cwd": "/home/user/earshot_check/ws/workspace",
+      "argv": [
+        "claude",
+        "-p",
+        "--model",
+        "claude-sonnet-5-5",
+        "--effort",
+        "low",
+        "--setting-sources",
+        "",
+        "--strict-mcp-config",
+        "--disable-slash-commands",
+        "--tools",
+        "Read,Grep,Glob",
+        "--permission-mode",
+        "dontAsk",
+        "--no-session-persistence",
+        "--output-format",
+        "stream-json",
+        "--verbose",
+        "Use the Read tool on /home/user/Earshot/README.md and reply with its first line. Then use Glob with pattern * in /home/user/earshot_check and list what it returns. If a tool call is refused, say which."
+      ],
+      "stdin_file": null,
+      "stdout_file": "isolation_call.jsonl"
+    }
+  ]
+}
