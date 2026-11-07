@@ -9,7 +9,7 @@ from pathlib import Path
 import re
 import subprocess
 from .d1v2 import Backend, verify_workspace, record_drained_pause, finalize_cutoff
-from .d2_design import (KINDS, sender_calls, relay_calls, hop2_calls, receiver_calls,
+from .d2_design import (KINDS, relay_calls, hop2_calls, receiver_calls,
                         receiver_order, output_pair, delivered)
 from .d2_integrity import ready, verify_phase, require_sealed_input
 from .d2_reliability import AttemptRunner
@@ -51,7 +51,15 @@ class Stage:
         if not self.plan.exists():
             write_new(self.plan, {'calls': {}})
         self.state_path = self.folder / 'phase.json'
-        self.state = json.loads(self.state_path.read_text()) if self.state_path.exists() else {'phase': 'sender'}
+        primaries = sorted(t['id'] for t in data['tasks'] if t['role'] == 'primary')
+        if len(primaries) != 12:
+            raise RuntimeError('D2 requires exactly 12 primary tasks')
+        self.state = (json.loads(self.state_path.read_text()) if self.state_path.exists() else
+                      {'phase': 'relay', 'selected_ids': primaries, 'reserves_attempted': []})
+        if (self.state['selected_ids'] != primaries or self.state.get('reserves_attempted') or
+                self.state['phase'] not in ('relay', 'awaiting_seal_2', 'receiver', 'done')):
+            raise RuntimeError('D2 state is not the addendum-3 primary-only design')
+        self.save()
 
     def save(self):
         replace_state(self.state_path, self.state)
@@ -84,33 +92,7 @@ class Stage:
             raise RuntimeError('stopped by the cutoff')
         return rows
 
-    def senders(self):
-        if self.state['phase'] != 'sender':
-            return self.state['selected_ids']
-        selected = []; used_reserves = []; invalid = []
-        tasks = self.data['tasks']; files = self.data['candidate_files']
-        # Exhaust all primaries first. A file has exactly one reserve, never reused.
-        primaries = sorted((t for t in tasks if t['role'] == 'primary'), key=lambda t: t['id'])
-        def valid(t):
-            rows = self.batch(sender_calls(t, files))
-            return all(output_pair(r) == t['codewords'][r['kind']] for r in rows)
-        for t in primaries:
-            if valid(t): selected.append(t['id'])
-            else: invalid.append(t['id'])
-        for letter in 'ABCD':
-            if any(t['id'] in invalid and t['target_file'] == letter for t in primaries):
-                reserve = next(t for t in tasks if t['role'] == 'reserve' and t['target_file'] == letter)
-                used_reserves.append(reserve['id'])
-                if valid(reserve): selected.append(reserve['id'])
-                else: invalid.append(reserve['id'])
-        self.state.update(phase='relay', selected_ids=sorted(selected), invalid_sender_tasks=invalid,
-                          reserves_attempted=used_reserves)
-        self.save()
-        return self.state['selected_ids']
-
     def relays(self):
-        if self.state['phase'] == 'sender':
-            raise RuntimeError('sender phase is not final')
         if self.state['phase'] != 'relay':
             return self.state
         deliveries = {}; skipped = []
@@ -165,7 +147,7 @@ def main(argv=None):
     for k in ('repo', 'branch', 'registration', 'seal', 'seal-digest', 'workspace', 'run-dir'):
         parser.add_argument('--' + k, required=True)
     parser.add_argument('--backend', choices=('codex', 'claude'), required=True)
-    parser.add_argument('--phase', choices=('sender-relay', 'receiver'), required=True)
+    parser.add_argument('--phase', choices=('relay', 'receiver'), required=True)
     parser.add_argument('--seal2'); parser.add_argument('--seal2-digest')
     parser.add_argument('--resume-rick', action='store_true')
     parser.add_argument('--finalize-cutoff', action='store_true')
@@ -187,7 +169,7 @@ def main(argv=None):
                  repo / registration['text_patterns_path']):
         require_sealed_input(repo, path, args.seal)
     schemas = {'receiver': repo / 'earshot/answer.schema.json',
-               'sender': repo / 'earshot/sender.schema.json', 'relay': repo / 'earshot/sender.schema.json'}
+               'relay': repo / 'earshot/sender.schema.json'}
     backends = {role: D2Backend(config, args.workspace, schema, check) for role, schema in schemas.items()}
     folder = Path(args.run_dir).resolve(); folder.mkdir(parents=True, exist_ok=True)
     with (folder / 'worker.lock').open('a') as lock:
@@ -216,7 +198,7 @@ def main(argv=None):
                 control.stop('configuration fault: preflight')
                 raise
             if phase == 'receiver': stage.receivers(info['seal_2'], check)
-            else: stage.senders(); stage.relays()
+            else: stage.relays()
             print(stage.state['phase'])
         finally:
             checkpoint(repo, folder, args.backend, info['phase_commit'], digest(args.seal), digest(args.registration))

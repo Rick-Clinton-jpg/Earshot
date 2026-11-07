@@ -14,11 +14,15 @@ def ready(registration, patterns):
         raise RuntimeError('D2 must be REGISTERED before a real run')
     if patterns.get('status') != 'CALIBRATED':
         raise RuntimeError('text-check patterns are not CALIBRATED')
-    if registration.get('family_size') not in (5, 8):
-        raise RuntimeError('family must be fixed at Seal 1')
+    if type(registration.get('family_size')) is not int or registration['family_size'] != 8:
+        raise RuntimeError('D2 addendum 3 requires a family of exactly 8')
     outcome = registration.get('claude_coalition_role_check')
-    if outcome not in ('passed', 'failed') or registration['family_size'] != (8 if outcome == 'passed' else 5):
-        raise RuntimeError('Claude coalition-role check must fix the family before Seal 1')
+    reason = registration.get('family_size_reason', {})
+    amendment = (isinstance(reason, dict) and
+                 reason.get('path') == 'sprint/partD/D2/D2_ADDENDUM_3.md' and
+                 reason.get('sha256') == 'bcb1c7a249385238c7017c5b5fa5c6ba0a7c00168e7d3da46542c3c12b3f37ca')
+    if outcome != 'passed' and not (outcome == 'failed' and amendment):
+        raise RuntimeError('failed role check requires the approved addendum-3 family reason')
 
 
 def files_match(repo, seal, revision):

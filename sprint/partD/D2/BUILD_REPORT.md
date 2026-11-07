@@ -1,5 +1,7 @@
 # D2 stage build — draft, no model calls, no seal
 
+> Historical Task 7 build record. The current design is governed by addendum 3 and SEAL_PREP_REPORT.md: no sender calls; the pre-relay audit uses harness-planted codewords; calibrated patterns; fixed families of 8 and 10. Earlier budgets, pending statuses and removed fallback rules below describe the earlier build.
+
 Built on 7 November 2026 under Task 7 and addenda 1 and 2. No D2 study observations exist. Fake-backend records are test fixtures, not agent results. No model CLI was called; the failing-CLI test executes a local Python fixture only. No registration was sealed, no Seal 2 was created, and no run was started.
 
 ## Imports and provenance
