@@ -6,4 +6,4 @@ Codex only; Radon at `54b88e5878b2724bf4d77f97349588b811abdff2`; 12 tasks, four 
 
 These are the unmodified outputs of the sealed `earshot.partb_score` entry point, run as specified in [RUNBOOK.md](../RUNBOOK.md). Choose a new empty output path for any reproduction. Full verification requires the published source-sealed files and ledgered runtime records. See [the registration](../PART_B_REGISTRATION.md) for scope, condition definitions, denominators and repair policy.
 
-`SHA256SUMS` records the generated outputs and accompanying provenance documents. Both generated-output hashes match the second-machine fingerprints supplied by Rick; this checks computation on the same observations, not independent replication.
+`SHA256SUMS` records the generated outputs and accompanying provenance documents. Both generated-output hashes match the second-machine fingerprints supplied by the author; this checks computation on the same observations, not independent replication.
