@@ -1,0 +1,125 @@
+........................................................................ [ 17%]
+........................................................................ [ 35%]
+......................................................................FF [ 53%]
+.FF..................................................................... [ 71%]
+...............................................................FF....... [ 89%]
+............................................                             [100%]
+=================================== FAILURES ===================================
+____________________ test_visitor_classes[code0-expected0] _____________________
+
+code = '\n     class A(object):\n\n         def m(self, a, b):\n             if not a or b:\n                 return b - 1\n ....m(k) < k:\n                 k -= self.m(k ** 2 - min(self.m(j) for j in range(k ** 4)))\n             return k\n     '
+expected = (8, 4, 3)
+
+    @pytest.mark.parametrize('code,expected', CLASSES_CASES)
+    def test_visitor_classes(code, expected):
+        total_class_complexity = expected[0]
+        methods_complexity = expected[1:]
+        visitor = ComplexityVisitor.from_code(dedent(code))
+        assert len(visitor.classes) == 1
+        assert len(visitor.functions) == 0
+        cls = visitor.classes[0]
+>       assert cls.real_complexity == total_class_complexity
+E       AssertionError: assert 7 == 8
+E        +  where 7 = Class(name='A', lineno=1, col_offset=0, endline=14, methods=[Function(name='m', lineno=3, col_offset=4, endline=9, is_..._offset=4, endline=14, is_method=True, classname='A', closures=[], complexity=3)], inner_classes=[], real_complexity=7).real_complexity
+
+radon/tests/test_complexity_visitor.py:596: AssertionError
+____________________ test_visitor_classes[code1-expected1] _____________________
+
+code = '\n     class B(object):\n\n         ATTR = 9 if A().n(9) == 9 else 10\n         import sys\n         if sys.version_i...self\n             elif a > self.ATTR ** 2:\n                 yield self.__iter__()\n             yield iter(a)\n     '
+expected = (7, 1, 3)
+
+    @pytest.mark.parametrize('code,expected', CLASSES_CASES)
+    def test_visitor_classes(code, expected):
+        total_class_complexity = expected[0]
+        methods_complexity = expected[1:]
+        visitor = ComplexityVisitor.from_code(dedent(code))
+        assert len(visitor.classes) == 1
+        assert len(visitor.functions) == 0
+        cls = visitor.classes[0]
+>       assert cls.real_complexity == total_class_complexity
+E       AssertionError: assert 6 == 7
+E        +  where 6 = Class(name='B', lineno=1, col_offset=0, endline=18, methods=[Function(name='__iter__', lineno=9, col_offset=4, endline..._offset=4, endline=18, is_method=True, classname='B', closures=[], complexity=3)], inner_classes=[], real_complexity=6).real_complexity
+
+radon/tests/test_complexity_visitor.py:596: AssertionError
+_____________________ test_visitor_module[code1-expected1] _____________________
+
+code = '\n     try:\n         1 / 0\n     except ZeroDivisionError:\n         print\n     except TypeError:\n         pass\n\...nner(n):\n             return n ** 2\n         if a < b:\n             b, a = a, inner(b)\n         return a, b\n     '
+expected = (3, 1, 3, 7)
+
+    @pytest.mark.parametrize('code,expected', GENERAL_CASES)
+    def test_visitor_module(code, expected):
+        (
+            module_complexity,
+            functions_complexity,
+            classes_complexity,
+            total_complexity,
+        ) = expected
+    
+        visitor = ComplexityVisitor.from_code(dedent(code))
+        assert visitor.complexity, module_complexity
+        assert visitor.functions_complexity == functions_complexity
+>       assert visitor.classes_complexity == classes_complexity
+E       assert 2 == 3
+E        +  where 2 = <radon.visitors.ComplexityVisitor object at 0x10bd9dac0>.classes_complexity
+
+radon/tests/test_complexity_visitor.py:671: AssertionError
+_ test_visitor_module[\n     class f(object):\n         class inner(object):\n             pass\n     -expected2] _
+
+code = '\n     class f(object):\n         class inner(object):\n             pass\n     '
+expected = (1, 0, 0, 1)
+
+    @pytest.mark.parametrize('code,expected', GENERAL_CASES)
+    def test_visitor_module(code, expected):
+        (
+            module_complexity,
+            functions_complexity,
+            classes_complexity,
+            total_complexity,
+        ) = expected
+    
+        visitor = ComplexityVisitor.from_code(dedent(code))
+        assert visitor.complexity, module_complexity
+        assert visitor.functions_complexity == functions_complexity
+>       assert visitor.classes_complexity == classes_complexity
+E       assert -1 == 0
+E        +  where -1 = <radon.visitors.ComplexityVisitor object at 0x10bd9f9e0>.classes_complexity
+
+radon/tests/test_complexity_visitor.py:671: AssertionError
+_________________ test_mi_visit[code4-93.84027450359395-True] __________________
+
+code = "class A(object):\n\n    def __init__(self, n):\n        # this is awesome\n        self.n = sum(i for i in range(n) i...     return (self.n + 2) ** j\n        return (self.n - 2) ** j\n\na = A(4)\na.m(42)  # i don't know why, but it works"
+expected = 93.84027450359395, count_multi = True
+
+    @pytest.mark.parametrize('code,expected,count_multi', MI_VISIT_CASES)
+    def test_mi_visit(code, expected, count_multi):
+        code = dedent(code)
+        expected = expected
+        count_multi = count_multi
+>       assert mi_visit(code, count_multi) == expected
+E       assert 93.97477742757056 == 93.84027450359395
+E        +  where 93.97477742757056 = mi_visit("class A(object):\n\n    def __init__(self, n):\n        # this is awesome\n        self.n = sum(i for i in range(n) i...     return (self.n + 2) ** j\n        return (self.n - 2) ** j\n\na = A(4)\na.m(42)  # i don't know why, but it works", True)
+
+radon/tests/test_other_metrics.py:169: AssertionError
+_________________ test_mi_visit[code5-88.84176333569131-False] _________________
+
+code = "class A(object):\n\n    def __init__(self, n):\n        # this is awesome\n        self.n = sum(i for i in range(n) i...     return (self.n + 2) ** j\n        return (self.n - 2) ** j\n\na = A(4)\na.m(42)  # i don't know why, but it works"
+expected = 88.84176333569131, count_multi = False
+
+    @pytest.mark.parametrize('code,expected,count_multi', MI_VISIT_CASES)
+    def test_mi_visit(code, expected, count_multi):
+        code = dedent(code)
+        expected = expected
+        count_multi = count_multi
+>       assert mi_visit(code, count_multi) == expected
+E       assert 88.97626625966794 == 88.84176333569131
+E        +  where 88.97626625966794 = mi_visit("class A(object):\n\n    def __init__(self, n):\n        # this is awesome\n        self.n = sum(i for i in range(n) i...     return (self.n + 2) ** j\n        return (self.n - 2) ** j\n\na = A(4)\na.m(42)  # i don't know why, but it works", False)
+
+radon/tests/test_other_metrics.py:169: AssertionError
+=========================== short test summary info ============================
+FAILED radon/tests/test_complexity_visitor.py::test_visitor_classes[code0-expected0]
+FAILED radon/tests/test_complexity_visitor.py::test_visitor_classes[code1-expected1]
+FAILED radon/tests/test_complexity_visitor.py::test_visitor_module[code1-expected1]
+FAILED radon/tests/test_complexity_visitor.py::test_visitor_module[\n     class f(object):\n         class inner(object):\n             pass\n     -expected2]
+FAILED radon/tests/test_other_metrics.py::test_mi_visit[code4-93.84027450359395-True]
+FAILED radon/tests/test_other_metrics.py::test_mi_visit[code5-88.84176333569131-False]
+6 failed, 398 passed in 0.21s

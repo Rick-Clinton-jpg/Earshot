@@ -1,0 +1,11 @@
+--- a/radon/complexity.py
++++ b/radon/complexity.py
+@@ -86,7 +86,7 @@
+         new_blocks.append(block)
+         for inner_block in ('closures', 'inner_classes'):
+             for i_block in getattr(block, inner_block, ()):
+-                named = i_block._replace(name=i_block.name)
++                named = i_block._replace(name=block.name + '.' + i_block.name)
+                 all_blocks.append(named)
+                 for meth in getattr(named, 'methods', ()):
+                     m_named = meth._replace(classname=named.name)

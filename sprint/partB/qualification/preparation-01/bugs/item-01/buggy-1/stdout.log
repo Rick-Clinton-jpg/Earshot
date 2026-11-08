@@ -1,0 +1,986 @@
+........................................................................ [ 17%]
+........................................................................ [ 35%]
+........................................................................ [ 53%]
+.......................FF............................................... [ 71%]
+.............................................................FFFF....... [ 89%]
+FFFFFFFFFFFFFFF.F.F.FF.FFF.FFFFFFFFFFFFFFFFF                             [100%]
+=================================== FAILURES ===================================
+________________________________ test_raw_ipynb ________________________________
+
+log_mock = <MagicMock name='log_result' id='4455432944'>
+
+    @pytest.mark.skipif(not SUPPORTS_IPYNB, reason="nbformat not installed")
+    def test_raw_ipynb(log_mock):
+        raw_cfg = cli.Config(**BASE_CONFIG_WITH_IPYNB.config_values)
+    
+        target = os.path.join(DIRNAME, 'data', 'example.ipynb')
+        harvester = RawHarvester([DIRNAME], raw_cfg)
+        out = json.loads(harvester.as_json())
+        assert harvester.config.include_ipynb == True
+        assert target in out
+        assert out[target]['loc'] == 63
+>       assert out[target]['lloc'] == 37
+E       assert 1 == 37
+
+radon/tests/test_ipynb.py:117: AssertionError
+_____________________________ test_raw_ipynb_cells _____________________________
+
+log_mock = <MagicMock name='log_result' id='4455441440'>
+
+    @pytest.mark.skipif(not SUPPORTS_IPYNB, reason="nbformat not installed")
+    def test_raw_ipynb_cells(log_mock):
+        raw_cfg = cli.Config(**BASE_CONFIG_WITH_IPYNB_AND_CELLS.config_values)
+    
+        target = os.path.join(DIRNAME, 'data', 'example.ipynb')
+        harvester = RawHarvester([DIRNAME], raw_cfg)
+        out = json.loads(harvester.as_json())
+        cell_target = target + ":[3]"
+        assert target in out
+        assert cell_target in out
+        assert out[cell_target]['loc'] == 52
+>       assert out[cell_target]['lloc'] == 27
+E       assert 0 == 27
+
+radon/tests/test_ipynb.py:136: AssertionError
+_ test_mi_visit[\n     def f(a, b, c):\n         return (a ** b) % c\n\n     k = f(1, 2, 3)\n     print(k ** 2 - 1)\n-75.40162245189028-True] _
+
+code = 'def f(a, b, c):\n    return (a ** b) % c\n\nk = f(1, 2, 3)\nprint(k ** 2 - 1)'
+expected = 75.40162245189028, count_multi = True
+
+    @pytest.mark.parametrize('code,expected,count_multi', MI_VISIT_CASES)
+    def test_mi_visit(code, expected, count_multi):
+        code = dedent(code)
+        expected = expected
+        count_multi = count_multi
+>       assert mi_visit(code, count_multi) == expected
+E       AssertionError: assert 100.0 == 75.40162245189028
+E        +  where 100.0 = mi_visit('def f(a, b, c):\n    return (a ** b) % c\n\nk = f(1, 2, 3)\nprint(k ** 2 - 1)', True)
+
+radon/tests/test_other_metrics.py:169: AssertionError
+_ test_mi_visit[\n     def f(a, b, c):\n         return (a ** b) % c\n\n     k = f(1, 2, 3)\n     print(k ** 2 - 1)\n-75.40162245189028-False] _
+
+code = 'def f(a, b, c):\n    return (a ** b) % c\n\nk = f(1, 2, 3)\nprint(k ** 2 - 1)'
+expected = 75.40162245189028, count_multi = False
+
+    @pytest.mark.parametrize('code,expected,count_multi', MI_VISIT_CASES)
+    def test_mi_visit(code, expected, count_multi):
+        code = dedent(code)
+        expected = expected
+        count_multi = count_multi
+>       assert mi_visit(code, count_multi) == expected
+E       AssertionError: assert 100.0 == 75.40162245189028
+E        +  where 100.0 = mi_visit('def f(a, b, c):\n    return (a ** b) % c\n\nk = f(1, 2, 3)\nprint(k ** 2 - 1)', False)
+
+radon/tests/test_other_metrics.py:169: AssertionError
+_________________ test_mi_visit[code4-93.84027450359395-True] __________________
+
+code = "class A(object):\n\n    def __init__(self, n):\n        # this is awesome\n        self.n = sum(i for i in range(n) i...     return (self.n + 2) ** j\n        return (self.n - 2) ** j\n\na = A(4)\na.m(42)  # i don't know why, but it works"
+expected = 93.84027450359395, count_multi = True
+
+    @pytest.mark.parametrize('code,expected,count_multi', MI_VISIT_CASES)
+    def test_mi_visit(code, expected, count_multi):
+        code = dedent(code)
+        expected = expected
+        count_multi = count_multi
+>       assert mi_visit(code, count_multi) == expected
+E       assert 100.0 == 93.84027450359395
+E        +  where 100.0 = mi_visit("class A(object):\n\n    def __init__(self, n):\n        # this is awesome\n        self.n = sum(i for i in range(n) i...     return (self.n + 2) ** j\n        return (self.n - 2) ** j\n\na = A(4)\na.m(42)  # i don't know why, but it works", True)
+
+radon/tests/test_other_metrics.py:169: AssertionError
+_________________ test_mi_visit[code5-88.84176333569131-False] _________________
+
+code = "class A(object):\n\n    def __init__(self, n):\n        # this is awesome\n        self.n = sum(i for i in range(n) i...     return (self.n + 2) ** j\n        return (self.n - 2) ** j\n\na = A(4)\na.m(42)  # i don't know why, but it works"
+expected = 88.84176333569131, count_multi = False
+
+    @pytest.mark.parametrize('code,expected,count_multi', MI_VISIT_CASES)
+    def test_mi_visit(code, expected, count_multi):
+        code = dedent(code)
+        expected = expected
+        count_multi = count_multi
+>       assert mi_visit(code, count_multi) == expected
+E       assert 100.0 == 88.84176333569131
+E        +  where 100.0 = mi_visit("class A(object):\n\n    def __init__(self, n):\n        # this is awesome\n        self.n = sum(i for i in range(n) i...     return (self.n + 2) ** j\n        return (self.n - 2) ** j\n\na = A(4)\na.m(42)  # i don't know why, but it works", False)
+
+radon/tests/test_other_metrics.py:169: AssertionError
+___________________ test_logical[\n     a * b + c\n     -1] ____________________
+
+code = [TokenInfo(type=1 (NAME), string='a', start=(1, 0), end=(1, 1), line='a * b + c'), TokenInfo(type=55 (OP), string='*',...nd=(1, 9), line='a * b + c'), TokenInfo(type=4 (NEWLINE), string='', start=(1, 9), end=(1, 10), line='a * b + c'), ...]
+expected_number_of_lines = 1
+
+    @pytest.mark.parametrize('code,expected_number_of_lines', LOGICAL_LINES_CASES)
+    def test_logical(code, expected_number_of_lines):
+        code = _generate(dedent(code))
+>       assert _logical(code) == expected_number_of_lines
+E       AssertionError: assert 0 == 1
+E        +  where 0 = _logical([TokenInfo(type=1 (NAME), string='a', start=(1, 0), end=(1, 1), line='a * b + c'), TokenInfo(type=55 (OP), string='*',...nd=(1, 9), line='a * b + c'), TokenInfo(type=4 (NEWLINE), string='', start=(1, 9), end=(1, 10), line='a * b + c'), ...])
+
+radon/tests/test_raw.py:189: AssertionError
+_____________________ test_logical[\n     if a:\n     -1] ______________________
+
+code = [TokenInfo(type=1 (NAME), string='if', start=(1, 0), end=(1, 2), line='if a:'), TokenInfo(type=1 (NAME), string='a', s..., start=(1, 5), end=(1, 6), line='if a:'), TokenInfo(type=0 (ENDMARKER), string='', start=(2, 0), end=(2, 0), line='')]
+expected_number_of_lines = 1
+
+    @pytest.mark.parametrize('code,expected_number_of_lines', LOGICAL_LINES_CASES)
+    def test_logical(code, expected_number_of_lines):
+        code = _generate(dedent(code))
+>       assert _logical(code) == expected_number_of_lines
+E       AssertionError: assert 0 == 1
+E        +  where 0 = _logical([TokenInfo(type=1 (NAME), string='if', start=(1, 0), end=(1, 2), line='if a:'), TokenInfo(type=1 (NAME), string='a', s..., start=(1, 5), end=(1, 6), line='if a:'), TokenInfo(type=0 (ENDMARKER), string='', start=(2, 0), end=(2, 0), line='')])
+
+radon/tests/test_raw.py:189: AssertionError
+______________________ test_logical[\n     try:\n     -1] ______________________
+
+code = [TokenInfo(type=1 (NAME), string='try', start=(1, 0), end=(1, 3), line='try:'), TokenInfo(type=55 (OP), string=':', st...', start=(1, 4), end=(1, 5), line='try:'), TokenInfo(type=0 (ENDMARKER), string='', start=(2, 0), end=(2, 0), line='')]
+expected_number_of_lines = 1
+
+    @pytest.mark.parametrize('code,expected_number_of_lines', LOGICAL_LINES_CASES)
+    def test_logical(code, expected_number_of_lines):
+        code = _generate(dedent(code))
+>       assert _logical(code) == expected_number_of_lines
+E       AssertionError: assert 0 == 1
+E        +  where 0 = _logical([TokenInfo(type=1 (NAME), string='try', start=(1, 0), end=(1, 3), line='try:'), TokenInfo(type=55 (OP), string=':', st...', start=(1, 4), end=(1, 5), line='try:'), TokenInfo(type=0 (ENDMARKER), string='', start=(2, 0), end=(2, 0), line='')])
+
+radon/tests/test_raw.py:189: AssertionError
+____________ test_logical[\n     if a:  # just a comment\n     -1] _____________
+
+code = [TokenInfo(type=1 (NAME), string='if', start=(1, 0), end=(1, 2), line='if a:  # just a comment'), TokenInfo(type=1 (NA...=(1, 24), line='if a:  # just a comment'), TokenInfo(type=0 (ENDMARKER), string='', start=(2, 0), end=(2, 0), line='')]
+expected_number_of_lines = 1
+
+    @pytest.mark.parametrize('code,expected_number_of_lines', LOGICAL_LINES_CASES)
+    def test_logical(code, expected_number_of_lines):
+        code = _generate(dedent(code))
+>       assert _logical(code) == expected_number_of_lines
+E       AssertionError: assert 0 == 1
+E        +  where 0 = _logical([TokenInfo(type=1 (NAME), string='if', start=(1, 0), end=(1, 2), line='if a:  # just a comment'), TokenInfo(type=1 (NA...=(1, 24), line='if a:  # just a comment'), TokenInfo(type=0 (ENDMARKER), string='', start=(2, 0), end=(2, 0), line='')])
+
+radon/tests/test_raw.py:189: AssertionError
+_____________ test_logical[\n     try:  # just a comment\n     -1] _____________
+
+code = [TokenInfo(type=1 (NAME), string='try', start=(1, 0), end=(1, 3), line='try:  # just a comment'), TokenInfo(type=55 (O...d=(1, 23), line='try:  # just a comment'), TokenInfo(type=0 (ENDMARKER), string='', start=(2, 0), end=(2, 0), line='')]
+expected_number_of_lines = 1
+
+    @pytest.mark.parametrize('code,expected_number_of_lines', LOGICAL_LINES_CASES)
+    def test_logical(code, expected_number_of_lines):
+        code = _generate(dedent(code))
+>       assert _logical(code) == expected_number_of_lines
+E       AssertionError: assert 0 == 1
+E        +  where 0 = _logical([TokenInfo(type=1 (NAME), string='try', start=(1, 0), end=(1, 3), line='try:  # just a comment'), TokenInfo(type=55 (O...d=(1, 23), line='try:  # just a comment'), TokenInfo(type=0 (ENDMARKER), string='', start=(2, 0), end=(2, 0), line='')])
+
+radon/tests/test_raw.py:189: AssertionError
+___________________ test_logical[\n     if a: pass\n     -2] ___________________
+
+code = [TokenInfo(type=1 (NAME), string='if', start=(1, 0), end=(1, 2), line='if a: pass'), TokenInfo(type=1 (NAME), string='...=(1, 10), end=(1, 11), line='if a: pass'), TokenInfo(type=0 (ENDMARKER), string='', start=(2, 0), end=(2, 0), line='')]
+expected_number_of_lines = 2
+
+    @pytest.mark.parametrize('code,expected_number_of_lines', LOGICAL_LINES_CASES)
+    def test_logical(code, expected_number_of_lines):
+        code = _generate(dedent(code))
+>       assert _logical(code) == expected_number_of_lines
+E       AssertionError: assert 0 == 2
+E        +  where 0 = _logical([TokenInfo(type=1 (NAME), string='if', start=(1, 0), end=(1, 2), line='if a: pass'), TokenInfo(type=1 (NAME), string='...=(1, 10), end=(1, 11), line='if a: pass'), TokenInfo(type=0 (ENDMARKER), string='', start=(2, 0), end=(2, 0), line='')])
+
+radon/tests/test_raw.py:189: AssertionError
+_________________ test_logical[\n     if a: continue\n     -2] _________________
+
+code = [TokenInfo(type=1 (NAME), string='if', start=(1, 0), end=(1, 2), line='if a: continue'), TokenInfo(type=1 (NAME), stri... 14), end=(1, 15), line='if a: continue'), TokenInfo(type=0 (ENDMARKER), string='', start=(2, 0), end=(2, 0), line='')]
+expected_number_of_lines = 2
+
+    @pytest.mark.parametrize('code,expected_number_of_lines', LOGICAL_LINES_CASES)
+    def test_logical(code, expected_number_of_lines):
+        code = _generate(dedent(code))
+>       assert _logical(code) == expected_number_of_lines
+E       AssertionError: assert 0 == 2
+E        +  where 0 = _logical([TokenInfo(type=1 (NAME), string='if', start=(1, 0), end=(1, 2), line='if a: continue'), TokenInfo(type=1 (NAME), stri... 14), end=(1, 15), line='if a: continue'), TokenInfo(type=0 (ENDMARKER), string='', start=(2, 0), end=(2, 0), line='')])
+
+radon/tests/test_raw.py:189: AssertionError
+__________________ test_logical[\n     if a: break\n     -2] ___________________
+
+code = [TokenInfo(type=1 (NAME), string='if', start=(1, 0), end=(1, 2), line='if a: break'), TokenInfo(type=1 (NAME), string=...(1, 11), end=(1, 12), line='if a: break'), TokenInfo(type=0 (ENDMARKER), string='', start=(2, 0), end=(2, 0), line='')]
+expected_number_of_lines = 2
+
+    @pytest.mark.parametrize('code,expected_number_of_lines', LOGICAL_LINES_CASES)
+    def test_logical(code, expected_number_of_lines):
+        code = _generate(dedent(code))
+>       assert _logical(code) == expected_number_of_lines
+E       AssertionError: assert 0 == 2
+E        +  where 0 = _logical([TokenInfo(type=1 (NAME), string='if', start=(1, 0), end=(1, 2), line='if a: break'), TokenInfo(type=1 (NAME), string=...(1, 11), end=(1, 12), line='if a: break'), TokenInfo(type=0 (ENDMARKER), string='', start=(2, 0), end=(2, 0), line='')])
+
+radon/tests/test_raw.py:189: AssertionError
+__________________ test_logical[\n     if a: return\n     -2] __________________
+
+code = [TokenInfo(type=1 (NAME), string='if', start=(1, 0), end=(1, 2), line='if a: return'), TokenInfo(type=1 (NAME), string...1, 12), end=(1, 13), line='if a: return'), TokenInfo(type=0 (ENDMARKER), string='', start=(2, 0), end=(2, 0), line='')]
+expected_number_of_lines = 2
+
+    @pytest.mark.parametrize('code,expected_number_of_lines', LOGICAL_LINES_CASES)
+    def test_logical(code, expected_number_of_lines):
+        code = _generate(dedent(code))
+>       assert _logical(code) == expected_number_of_lines
+E       AssertionError: assert 0 == 2
+E        +  where 0 = _logical([TokenInfo(type=1 (NAME), string='if', start=(1, 0), end=(1, 2), line='if a: return'), TokenInfo(type=1 (NAME), string...1, 12), end=(1, 13), line='if a: return'), TokenInfo(type=0 (ENDMARKER), string='', start=(2, 0), end=(2, 0), line='')])
+
+radon/tests/test_raw.py:189: AssertionError
+__________ test_logical[\n     if a: pass  # just a comment\n     -2] __________
+
+code = [TokenInfo(type=1 (NAME), string='if', start=(1, 0), end=(1, 2), line='if a: pass  # just a comment'), TokenInfo(type=...omment'), TokenInfo(type=4 (NEWLINE), string='', start=(1, 28), end=(1, 29), line='if a: pass  # just a comment'), ...]
+expected_number_of_lines = 2
+
+    @pytest.mark.parametrize('code,expected_number_of_lines', LOGICAL_LINES_CASES)
+    def test_logical(code, expected_number_of_lines):
+        code = _generate(dedent(code))
+>       assert _logical(code) == expected_number_of_lines
+E       AssertionError: assert 0 == 2
+E        +  where 0 = _logical([TokenInfo(type=1 (NAME), string='if', start=(1, 0), end=(1, 2), line='if a: pass  # just a comment'), TokenInfo(type=...omment'), TokenInfo(type=4 (NEWLINE), string='', start=(1, 28), end=(1, 29), line='if a: pass  # just a comment'), ...])
+
+radon/tests/test_raw.py:189: AssertionError
+________ test_logical[\n     if a: continue  # just a comment\n     -2] ________
+
+code = [TokenInfo(type=1 (NAME), string='if', start=(1, 0), end=(1, 2), line='if a: continue  # just a comment'), TokenInfo(t...nt'), TokenInfo(type=4 (NEWLINE), string='', start=(1, 32), end=(1, 33), line='if a: continue  # just a comment'), ...]
+expected_number_of_lines = 2
+
+    @pytest.mark.parametrize('code,expected_number_of_lines', LOGICAL_LINES_CASES)
+    def test_logical(code, expected_number_of_lines):
+        code = _generate(dedent(code))
+>       assert _logical(code) == expected_number_of_lines
+E       AssertionError: assert 0 == 2
+E        +  where 0 = _logical([TokenInfo(type=1 (NAME), string='if', start=(1, 0), end=(1, 2), line='if a: continue  # just a comment'), TokenInfo(t...nt'), TokenInfo(type=4 (NEWLINE), string='', start=(1, 32), end=(1, 33), line='if a: continue  # just a comment'), ...])
+
+radon/tests/test_raw.py:189: AssertionError
+_________ test_logical[\n     if a: break  # just a comment\n     -2] __________
+
+code = [TokenInfo(type=1 (NAME), string='if', start=(1, 0), end=(1, 2), line='if a: break  # just a comment'), TokenInfo(type...mment'), TokenInfo(type=4 (NEWLINE), string='', start=(1, 29), end=(1, 30), line='if a: break  # just a comment'), ...]
+expected_number_of_lines = 2
+
+    @pytest.mark.parametrize('code,expected_number_of_lines', LOGICAL_LINES_CASES)
+    def test_logical(code, expected_number_of_lines):
+        code = _generate(dedent(code))
+>       assert _logical(code) == expected_number_of_lines
+E       AssertionError: assert 0 == 2
+E        +  where 0 = _logical([TokenInfo(type=1 (NAME), string='if', start=(1, 0), end=(1, 2), line='if a: break  # just a comment'), TokenInfo(type...mment'), TokenInfo(type=4 (NEWLINE), string='', start=(1, 29), end=(1, 30), line='if a: break  # just a comment'), ...])
+
+radon/tests/test_raw.py:189: AssertionError
+_________ test_logical[\n     if a: return  # just a comment\n     -2] _________
+
+code = [TokenInfo(type=1 (NAME), string='if', start=(1, 0), end=(1, 2), line='if a: return  # just a comment'), TokenInfo(typ...ment'), TokenInfo(type=4 (NEWLINE), string='', start=(1, 30), end=(1, 31), line='if a: return  # just a comment'), ...]
+expected_number_of_lines = 2
+
+    @pytest.mark.parametrize('code,expected_number_of_lines', LOGICAL_LINES_CASES)
+    def test_logical(code, expected_number_of_lines):
+        code = _generate(dedent(code))
+>       assert _logical(code) == expected_number_of_lines
+E       AssertionError: assert 0 == 2
+E        +  where 0 = _logical([TokenInfo(type=1 (NAME), string='if', start=(1, 0), end=(1, 2), line='if a: return  # just a comment'), TokenInfo(typ...ment'), TokenInfo(type=4 (NEWLINE), string='', start=(1, 30), end=(1, 31), line='if a: return  # just a comment'), ...])
+
+radon/tests/test_raw.py:189: AssertionError
+_________________ test_logical[\n     42 # a comment\n     -1] _________________
+
+code = [TokenInfo(type=2 (NUMBER), string='42', start=(1, 0), end=(1, 2), line='42 # a comment'), TokenInfo(type=64 (COMMENT)... 14), end=(1, 15), line='42 # a comment'), TokenInfo(type=0 (ENDMARKER), string='', start=(2, 0), end=(2, 0), line='')]
+expected_number_of_lines = 1
+
+    @pytest.mark.parametrize('code,expected_number_of_lines', LOGICAL_LINES_CASES)
+    def test_logical(code, expected_number_of_lines):
+        code = _generate(dedent(code))
+>       assert _logical(code) == expected_number_of_lines
+E       AssertionError: assert 0 == 1
+E        +  where 0 = _logical([TokenInfo(type=2 (NUMBER), string='42', start=(1, 0), end=(1, 2), line='42 # a comment'), TokenInfo(type=64 (COMMENT)... 14), end=(1, 15), line='42 # a comment'), TokenInfo(type=0 (ENDMARKER), string='', start=(2, 0), end=(2, 0), line='')])
+
+radon/tests/test_raw.py:189: AssertionError
+__________ test_logical[\n     """\n     multiple\n     """\n     -1] __________
+
+code = [TokenInfo(type=3 (STRING), string='"""\nmultiple\n"""', start=(1, 0), end=(3, 3), line='"""\nmultiple\n"""'), TokenIn...'', start=(3, 3), end=(3, 4), line='"""'), TokenInfo(type=0 (ENDMARKER), string='', start=(4, 0), end=(4, 0), line='')]
+expected_number_of_lines = 1
+
+    @pytest.mark.parametrize('code,expected_number_of_lines', LOGICAL_LINES_CASES)
+    def test_logical(code, expected_number_of_lines):
+        code = _generate(dedent(code))
+>       assert _logical(code) == expected_number_of_lines
+E       assert 0 == 1
+E        +  where 0 = _logical([TokenInfo(type=3 (STRING), string='"""\nmultiple\n"""', start=(1, 0), end=(3, 3), line='"""\nmultiple\n"""'), TokenIn...'', start=(3, 3), end=(3, 4), line='"""'), TokenInfo(type=0 (ENDMARKER), string='', start=(4, 0), end=(4, 0), line='')])
+
+radon/tests/test_raw.py:189: AssertionError
+_________________ test_logical[\n     a = 2; b = 43\n     -2] __________________
+
+code = [TokenInfo(type=1 (NAME), string='a', start=(1, 0), end=(1, 1), line='a = 2; b = 43'), TokenInfo(type=55 (OP), string=..., 8), line='a = 2; b = 43'), TokenInfo(type=55 (OP), string='=', start=(1, 9), end=(1, 10), line='a = 2; b = 43'), ...]
+expected_number_of_lines = 2
+
+    @pytest.mark.parametrize('code,expected_number_of_lines', LOGICAL_LINES_CASES)
+    def test_logical(code, expected_number_of_lines):
+        code = _generate(dedent(code))
+>       assert _logical(code) == expected_number_of_lines
+E       AssertionError: assert 1 == 2
+E        +  where 1 = _logical([TokenInfo(type=1 (NAME), string='a', start=(1, 0), end=(1, 1), line='a = 2; b = 43'), TokenInfo(type=55 (OP), string=..., 8), line='a = 2; b = 43'), TokenInfo(type=55 (OP), string='=', start=(1, 9), end=(1, 10), line='a = 2; b = 43'), ...])
+
+radon/tests/test_raw.py:189: AssertionError
+_____ test_logical[\n     a = 2; b = 43; c = 42; d = 3; print(a)\n     -5] _____
+
+code = [TokenInfo(type=1 (NAME), string='a', start=(1, 0), end=(1, 1), line='a = 2; b = 43; c = 42; d = 3; print(a)'), TokenI...'), TokenInfo(type=55 (OP), string='=', start=(1, 9), end=(1, 10), line='a = 2; b = 43; c = 42; d = 3; print(a)'), ...]
+expected_number_of_lines = 5
+
+    @pytest.mark.parametrize('code,expected_number_of_lines', LOGICAL_LINES_CASES)
+    def test_logical(code, expected_number_of_lines):
+        code = _generate(dedent(code))
+>       assert _logical(code) == expected_number_of_lines
+E       AssertionError: assert 4 == 5
+E        +  where 4 = _logical([TokenInfo(type=1 (NAME), string='a', start=(1, 0), end=(1, 1), line='a = 2; b = 43; c = 42; d = 3; print(a)'), TokenI...'), TokenInfo(type=55 (OP), string='=', start=(1, 9), end=(1, 10), line='a = 2; b = 43; c = 42; d = 3; print(a)'), ...])
+
+radon/tests/test_raw.py:189: AssertionError
+________ test_analyze[\n     """\n     doc?\n     """\n     -expected1] ________
+
+code = '"""\ndoc?\n"""', expected = (3, 1, 0, 0, 3, 0, ...)
+
+    @pytest.mark.parametrize('code,expected', ANALYZE_CASES)
+    def test_analyze(code, expected):
+        code = dedent(code)
+    
+        try:
+            len(expected)
+        except:
+            with pytest.raises(expected):
+                analyze(code)
+        else:
+            result = analyze(code)
+>           assert result == Module(*expected)
+E           AssertionError: assert Module(loc=3,...le_comments=0) == Module(loc=3,...le_comments=0)
+E             
+E             Omitting 6 identical items, use -vv to show
+E             Differing attributes:
+E             ['lloc']
+E             
+E             Drill down into differing attribute lloc:
+E               lloc: 0 != 1
+E             Use -v to get more diff
+
+radon/tests/test_raw.py:460: AssertionError
+________________________ test_analyze[code2-expected2] _________________________
+
+code = "# just a comment\nif a and b:\n    print('woah')\nelse:\n    # you'll never get here\n    print('ven')"
+expected = (6, 4, 4, 2, 0, 0, ...)
+
+    @pytest.mark.parametrize('code,expected', ANALYZE_CASES)
+    def test_analyze(code, expected):
+        code = dedent(code)
+    
+        try:
+            len(expected)
+        except:
+            with pytest.raises(expected):
+                analyze(code)
+        else:
+            result = analyze(code)
+>           assert result == Module(*expected)
+E           AssertionError: assert Module(loc=6,...le_comments=2) == Module(loc=6,...le_comments=2)
+E             
+E             Omitting 6 identical items, use -vv to show
+E             Differing attributes:
+E             ['lloc']
+E             
+E             Drill down into differing attribute lloc:
+E               lloc: 0 != 4
+E             Use -v to get more diff
+
+radon/tests/test_raw.py:460: AssertionError
+_ test_analyze[\n     if a:\n         print\n\n\n     else:\n         print\n     -expected4] _
+
+code = 'if a:\n    print\n\n\nelse:\n    print'
+expected = (6, 4, 4, 0, 0, 2, ...)
+
+    @pytest.mark.parametrize('code,expected', ANALYZE_CASES)
+    def test_analyze(code, expected):
+        code = dedent(code)
+    
+        try:
+            len(expected)
+        except:
+            with pytest.raises(expected):
+                analyze(code)
+        else:
+            result = analyze(code)
+>           assert result == Module(*expected)
+E           AssertionError: assert Module(loc=6,...le_comments=0) == Module(loc=6,...le_comments=0)
+E             
+E             Omitting 6 identical items, use -vv to show
+E             Differing attributes:
+E             ['lloc']
+E             
+E             Drill down into differing attribute lloc:
+E               lloc: 0 != 4
+E             Use -v to get more diff
+
+radon/tests/test_raw.py:460: AssertionError
+_ test_analyze[\n     def f(n):\n         """here"""\n         return n * f(n - 1)\n     -expected5] _
+
+code = 'def f(n):\n    """here"""\n    return n * f(n - 1)'
+expected = (3, 3, 2, 0, 0, 0, ...)
+
+    @pytest.mark.parametrize('code,expected', ANALYZE_CASES)
+    def test_analyze(code, expected):
+        code = dedent(code)
+    
+        try:
+            len(expected)
+        except:
+            with pytest.raises(expected):
+                analyze(code)
+        else:
+            result = analyze(code)
+>           assert result == Module(*expected)
+E           AssertionError: assert Module(loc=3,...le_comments=1) == Module(loc=3,...le_comments=1)
+E             
+E             Omitting 6 identical items, use -vv to show
+E             Differing attributes:
+E             ['lloc']
+E             
+E             Drill down into differing attribute lloc:
+E               lloc: 0 != 3
+E             Use -v to get more diff
+
+radon/tests/test_raw.py:460: AssertionError
+________________________ test_analyze[code6-expected6] _________________________
+
+code = 'def hip(a, k):\n    if k == 1: return a\n    # getting high...\n    return a ** hip(a, k - 1)\n\ndef fib(n):\n    """...rly long time.\n    """\n    if n <= 1: return 1  # otherwise it will melt the cpu\n    return fib(n - 2) + fib(n - 1)'
+expected = (12, 9, 6, 2, 3, 2, ...)
+
+    @pytest.mark.parametrize('code,expected', ANALYZE_CASES)
+    def test_analyze(code, expected):
+        code = dedent(code)
+    
+        try:
+            len(expected)
+        except:
+            with pytest.raises(expected):
+                analyze(code)
+        else:
+            result = analyze(code)
+>           assert result == Module(*expected)
+E           AssertionError: assert Module(loc=12...le_comments=1) == Module(loc=12...le_comments=1)
+E             
+E             Omitting 6 identical items, use -vv to show
+E             Differing attributes:
+E             ['lloc']
+E             
+E             Drill down into differing attribute lloc:
+E               lloc: 0 != 9
+E             Use -v to get more diff
+
+radon/tests/test_raw.py:460: AssertionError
+________________________ test_analyze[code8-expected8] _________________________
+
+code = 'def foo(n=1):\n   """\n   Try it with n = 294942: it will take a fairly long time.\n   """\n   if n <= 1: return 1  # otherwise it will melt the cpu'
+expected = (5, 4, 2, 1, 3, 0, ...)
+
+    @pytest.mark.parametrize('code,expected', ANALYZE_CASES)
+    def test_analyze(code, expected):
+        code = dedent(code)
+    
+        try:
+            len(expected)
+        except:
+            with pytest.raises(expected):
+                analyze(code)
+        else:
+            result = analyze(code)
+>           assert result == Module(*expected)
+E           AssertionError: assert Module(loc=5,...le_comments=0) == Module(loc=5,...le_comments=0)
+E             
+E             Omitting 6 identical items, use -vv to show
+E             Differing attributes:
+E             ['lloc']
+E             
+E             Drill down into differing attribute lloc:
+E               lloc: 0 != 4
+E             Use -v to get more diff
+
+radon/tests/test_raw.py:460: AssertionError
+________________________ test_analyze[code9-expected9] _________________________
+
+code = 'def foo(n=1):\n   """\n   Try it with n = 294942: it will take a fairly long time.\n   """\n   if n <= 1: return 1  # otherwise it will melt the cpu\n   string = """This is a string not a comment"""'
+expected = (6, 5, 3, 1, 3, 0, ...)
+
+    @pytest.mark.parametrize('code,expected', ANALYZE_CASES)
+    def test_analyze(code, expected):
+        code = dedent(code)
+    
+        try:
+            len(expected)
+        except:
+            with pytest.raises(expected):
+                analyze(code)
+        else:
+            result = analyze(code)
+>           assert result == Module(*expected)
+E           AssertionError: assert Module(loc=6,...le_comments=0) == Module(loc=6,...le_comments=0)
+E             
+E             Omitting 6 identical items, use -vv to show
+E             Differing attributes:
+E             ['lloc']
+E             
+E             Drill down into differing attribute lloc:
+E               lloc: 0 != 5
+E             Use -v to get more diff
+
+radon/tests/test_raw.py:460: AssertionError
+_______________________ test_analyze[code10-expected10] ________________________
+
+code = 'def foo(n=1):\n   """\n   Try it with n = 294942: it will take a fairly long time.\n   """\n   if n <= 1: return 1  # otherwise it will melt the cpu\n   string = """\n            This is a string not a comment\n            """'
+expected = (8, 5, 5, 1, 3, 0, ...)
+
+    @pytest.mark.parametrize('code,expected', ANALYZE_CASES)
+    def test_analyze(code, expected):
+        code = dedent(code)
+    
+        try:
+            len(expected)
+        except:
+            with pytest.raises(expected):
+                analyze(code)
+        else:
+            result = analyze(code)
+>           assert result == Module(*expected)
+E           AssertionError: assert Module(loc=8,...le_comments=0) == Module(loc=8,...le_comments=0)
+E             
+E             Omitting 6 identical items, use -vv to show
+E             Differing attributes:
+E             ['lloc']
+E             
+E             Drill down into differing attribute lloc:
+E               lloc: 0 != 5
+E             Use -v to get more diff
+
+radon/tests/test_raw.py:460: AssertionError
+_______________________ test_analyze[code11-expected11] ________________________
+
+code = 'def foo(n=1):\n   """\n   Try it with n = 294942: it will take a fairly long time.\n   """\n   if n <= 1: return 1  # otherwise it will melt the cpu\n   string ="""\n           This is a string not a comment\n           """\n   test = 0'
+expected = (9, 6, 6, 1, 3, 0, ...)
+
+    @pytest.mark.parametrize('code,expected', ANALYZE_CASES)
+    def test_analyze(code, expected):
+        code = dedent(code)
+    
+        try:
+            len(expected)
+        except:
+            with pytest.raises(expected):
+                analyze(code)
+        else:
+            result = analyze(code)
+>           assert result == Module(*expected)
+E           AssertionError: assert Module(loc=9,...le_comments=0) == Module(loc=9,...le_comments=0)
+E             
+E             Omitting 6 identical items, use -vv to show
+E             Differing attributes:
+E             ['lloc']
+E             
+E             Drill down into differing attribute lloc:
+E               lloc: 0 != 6
+E             Use -v to get more diff
+
+radon/tests/test_raw.py:460: AssertionError
+_______________________ test_analyze[code12-expected12] ________________________
+
+code = 'def foo(n=1):\n   """\n   Try it with n = 294942: it will take a fairly long time.\n   """\n   if n <= 1: return 1  #...l melt the cpu\n   string = \\\n           """\n           This is a string not a comment\n           """\n   test = 0'
+expected = (10, 6, 7, 1, 3, 0, ...)
+
+    @pytest.mark.parametrize('code,expected', ANALYZE_CASES)
+    def test_analyze(code, expected):
+        code = dedent(code)
+    
+        try:
+            len(expected)
+        except:
+            with pytest.raises(expected):
+                analyze(code)
+        else:
+            result = analyze(code)
+>           assert result == Module(*expected)
+E           AssertionError: assert Module(loc=10...le_comments=0) == Module(loc=10...le_comments=0)
+E             
+E             Omitting 6 identical items, use -vv to show
+E             Differing attributes:
+E             ['lloc']
+E             
+E             Drill down into differing attribute lloc:
+E               lloc: 0 != 6
+E             Use -v to get more diff
+
+radon/tests/test_raw.py:460: AssertionError
+_______________________ test_analyze[code13-expected13] ________________________
+
+code = 'def foo(n=1):\n   """\n   Try it with n = 294942: it will take a fairly long time.\n   """\n   if n <= 1: return 1  #...u\n   string =\\\n           """\n           This is a string not a comment\n           """\n   test = 0\n   # Comment'
+expected = (11, 6, 7, 2, 3, 0, ...)
+
+    @pytest.mark.parametrize('code,expected', ANALYZE_CASES)
+    def test_analyze(code, expected):
+        code = dedent(code)
+    
+        try:
+            len(expected)
+        except:
+            with pytest.raises(expected):
+                analyze(code)
+        else:
+            result = analyze(code)
+>           assert result == Module(*expected)
+E           AssertionError: assert Module(loc=11...le_comments=1) == Module(loc=11...le_comments=1)
+E             
+E             Omitting 6 identical items, use -vv to show
+E             Differing attributes:
+E             ['lloc']
+E             
+E             Drill down into differing attribute lloc:
+E               lloc: 0 != 6
+E             Use -v to get more diff
+
+radon/tests/test_raw.py:460: AssertionError
+_______________________ test_analyze[code14-expected14] ________________________
+
+code = 'def foo(n=1):\n   """\n   Try it with n = 294942: it will take a fairly long time.\n   """\n   if n <= 1: return 1  #...l melt the cpu\n   test = 0\n   string = \\\n           """\n           This is a string not a comment\n           """'
+expected = (10, 6, 7, 1, 3, 0, ...)
+
+    @pytest.mark.parametrize('code,expected', ANALYZE_CASES)
+    def test_analyze(code, expected):
+        code = dedent(code)
+    
+        try:
+            len(expected)
+        except:
+            with pytest.raises(expected):
+                analyze(code)
+        else:
+            result = analyze(code)
+>           assert result == Module(*expected)
+E           AssertionError: assert Module(loc=10...le_comments=0) == Module(loc=10...le_comments=0)
+E             
+E             Omitting 6 identical items, use -vv to show
+E             Differing attributes:
+E             ['lloc']
+E             
+E             Drill down into differing attribute lloc:
+E               lloc: 0 != 6
+E             Use -v to get more diff
+
+radon/tests/test_raw.py:460: AssertionError
+_______________________ test_analyze[code15-expected15] ________________________
+
+code = 'def function(\n    args\n):\n    """This is a multi-line docstring\n    for the function\n    """\n    pass'
+expected = (7, 3, 4, 0, 3, 0, ...)
+
+    @pytest.mark.parametrize('code,expected', ANALYZE_CASES)
+    def test_analyze(code, expected):
+        code = dedent(code)
+    
+        try:
+            len(expected)
+        except:
+            with pytest.raises(expected):
+                analyze(code)
+        else:
+            result = analyze(code)
+>           assert result == Module(*expected)
+E           AssertionError: assert Module(loc=7,...le_comments=0) == Module(loc=7,...le_comments=0)
+E             
+E             Omitting 6 identical items, use -vv to show
+E             Differing attributes:
+E             ['lloc']
+E             
+E             Drill down into differing attribute lloc:
+E               lloc: 0 != 3
+E             Use -v to get more diff
+
+radon/tests/test_raw.py:460: AssertionError
+_ test_analyze[\n    def function():\n        multiline_with_equals_in_it = """ """\n        pass\n    -expected16] _
+
+code = 'def function():\n    multiline_with_equals_in_it = """ """\n    pass'
+expected = (3, 3, 3, 0, 0, 0, ...)
+
+    @pytest.mark.parametrize('code,expected', ANALYZE_CASES)
+    def test_analyze(code, expected):
+        code = dedent(code)
+    
+        try:
+            len(expected)
+        except:
+            with pytest.raises(expected):
+                analyze(code)
+        else:
+            result = analyze(code)
+>           assert result == Module(*expected)
+E           AssertionError: assert Module(loc=3,...le_comments=0) == Module(loc=3,...le_comments=0)
+E             
+E             Omitting 6 identical items, use -vv to show
+E             Differing attributes:
+E             ['lloc']
+E             
+E             Drill down into differing attribute lloc:
+E               lloc: 0 != 3
+E             Use -v to get more diff
+
+radon/tests/test_raw.py:460: AssertionError
+_______________________ test_analyze[code17-expected17] ________________________
+
+code = 'def function():\n    """ a docstring in a single line counts as a single-line comment """'
+expected = (2, 2, 1, 0, 0, 0, ...)
+
+    @pytest.mark.parametrize('code,expected', ANALYZE_CASES)
+    def test_analyze(code, expected):
+        code = dedent(code)
+    
+        try:
+            len(expected)
+        except:
+            with pytest.raises(expected):
+                analyze(code)
+        else:
+            result = analyze(code)
+>           assert result == Module(*expected)
+E           AssertionError: assert Module(loc=2,...le_comments=1) == Module(loc=2,...le_comments=1)
+E             
+E             Omitting 6 identical items, use -vv to show
+E             Differing attributes:
+E             ['lloc']
+E             
+E             Drill down into differing attribute lloc:
+E               lloc: 0 != 2
+E             Use -v to get more diff
+
+radon/tests/test_raw.py:460: AssertionError
+_ test_analyze[\n    def function():\n        """ this is not a """ """ docstring because it is concatenated """\n    -expected18] _
+
+code = 'def function():\n    """ this is not a """ """ docstring because it is concatenated """'
+expected = (2, 2, 2, 0, 0, 0, ...)
+
+    @pytest.mark.parametrize('code,expected', ANALYZE_CASES)
+    def test_analyze(code, expected):
+        code = dedent(code)
+    
+        try:
+            len(expected)
+        except:
+            with pytest.raises(expected):
+                analyze(code)
+        else:
+            result = analyze(code)
+>           assert result == Module(*expected)
+E           AssertionError: assert Module(loc=2,...le_comments=0) == Module(loc=2,...le_comments=0)
+E             
+E             Omitting 6 identical items, use -vv to show
+E             Differing attributes:
+E             ['lloc']
+E             
+E             Drill down into differing attribute lloc:
+E               lloc: 0 != 2
+E             Use -v to get more diff
+
+radon/tests/test_raw.py:460: AssertionError
+_ test_analyze[\n    def function():\n        " this is not a multiline " \\\n            " docstring "\n    -expected19] _
+
+code = 'def function():\n    " this is not a multiline " \\\n        " docstring "'
+expected = (3, 2, 3, 0, 0, 0, ...)
+
+    @pytest.mark.parametrize('code,expected', ANALYZE_CASES)
+    def test_analyze(code, expected):
+        code = dedent(code)
+    
+        try:
+            len(expected)
+        except:
+            with pytest.raises(expected):
+                analyze(code)
+        else:
+            result = analyze(code)
+>           assert result == Module(*expected)
+E           AssertionError: assert Module(loc=3,...le_comments=0) == Module(loc=3,...le_comments=0)
+E             
+E             Omitting 6 identical items, use -vv to show
+E             Differing attributes:
+E             ['lloc']
+E             
+E             Drill down into differing attribute lloc:
+E               lloc: 0 != 2
+E             Use -v to get more diff
+
+radon/tests/test_raw.py:460: AssertionError
+_______________________ test_analyze[code20-expected20] ________________________
+
+code = 'def function():\n    """ this is not a docstring """ # because it also has a comment on the line'
+expected = (2, 2, 2, 1, 0, 0, ...)
+
+    @pytest.mark.parametrize('code,expected', ANALYZE_CASES)
+    def test_analyze(code, expected):
+        code = dedent(code)
+    
+        try:
+            len(expected)
+        except:
+            with pytest.raises(expected):
+                analyze(code)
+        else:
+            result = analyze(code)
+>           assert result == Module(*expected)
+E           AssertionError: assert Module(loc=2,...le_comments=0) == Module(loc=2,...le_comments=0)
+E             
+E             Omitting 6 identical items, use -vv to show
+E             Differing attributes:
+E             ['lloc']
+E             
+E             Drill down into differing attribute lloc:
+E               lloc: 0 != 2
+E             Use -v to get more diff
+
+radon/tests/test_raw.py:460: AssertionError
+_______________________ test_analyze[code21-expected21] ________________________
+
+code = 'def function():\n    " a docstring is a not single-line comment when " \\\n        # followed by a comment on a another line'
+expected = (3, 2, 3, 1, 0, 0, ...)
+
+    @pytest.mark.parametrize('code,expected', ANALYZE_CASES)
+    def test_analyze(code, expected):
+        code = dedent(code)
+    
+        try:
+            len(expected)
+        except:
+            with pytest.raises(expected):
+                analyze(code)
+        else:
+            result = analyze(code)
+>           assert result == Module(*expected)
+E           AssertionError: assert Module(loc=3,...le_comments=0) == Module(loc=3,...le_comments=0)
+E             
+E             Omitting 6 identical items, use -vv to show
+E             Differing attributes:
+E             ['lloc']
+E             
+E             Drill down into differing attribute lloc:
+E               lloc: 0 != 2
+E             Use -v to get more diff
+
+radon/tests/test_raw.py:460: AssertionError
+_______________________ test_analyze[code22-expected22] ________________________
+
+code = 'def function():\n    """ docstring continued by blank line is not a single-line comment """ \\\n\n    pass'
+expected = (4, 2, 3, 0, 0, 1, ...)
+
+    @pytest.mark.parametrize('code,expected', ANALYZE_CASES)
+    def test_analyze(code, expected):
+        code = dedent(code)
+    
+        try:
+            len(expected)
+        except:
+            with pytest.raises(expected):
+                analyze(code)
+        else:
+            result = analyze(code)
+>           assert result == Module(*expected)
+E           AssertionError: assert Module(loc=4,...le_comments=0) == Module(loc=4,...le_comments=0)
+E             
+E             Omitting 6 identical items, use -vv to show
+E             Differing attributes:
+E             ['lloc']
+E             
+E             Drill down into differing attribute lloc:
+E               lloc: 0 != 2
+E             Use -v to get more diff
+
+radon/tests/test_raw.py:460: AssertionError
+___ test_analyze[\n    def function():\n        pass; pass\n    -expected23] ___
+
+code = 'def function():\n    pass; pass', expected = (2, 3, 2, 0, 0, 0, ...)
+
+    @pytest.mark.parametrize('code,expected', ANALYZE_CASES)
+    def test_analyze(code, expected):
+        code = dedent(code)
+    
+        try:
+            len(expected)
+        except:
+            with pytest.raises(expected):
+                analyze(code)
+        else:
+            result = analyze(code)
+>           assert result == Module(*expected)
+E           AssertionError: assert Module(loc=2,...le_comments=0) == Module(loc=2,...le_comments=0)
+E             
+E             Omitting 6 identical items, use -vv to show
+E             Differing attributes:
+E             ['lloc']
+E             
+E             Drill down into differing attribute lloc:
+E               lloc: 1 != 3
+E             Use -v to get more diff
+
+radon/tests/test_raw.py:460: AssertionError
+_ test_analyze[\n    def function():\n        """ doc string """; pass\n    -expected24] _
+
+code = 'def function():\n    """ doc string """; pass'
+expected = (2, 3, 2, 0, 0, 0, ...)
+
+    @pytest.mark.parametrize('code,expected', ANALYZE_CASES)
+    def test_analyze(code, expected):
+        code = dedent(code)
+    
+        try:
+            len(expected)
+        except:
+            with pytest.raises(expected):
+                analyze(code)
+        else:
+            result = analyze(code)
+>           assert result == Module(*expected)
+E           AssertionError: assert Module(loc=2,...le_comments=0) == Module(loc=2,...le_comments=0)
+E             
+E             Omitting 6 identical items, use -vv to show
+E             Differing attributes:
+E             ['lloc']
+E             
+E             Drill down into differing attribute lloc:
+E               lloc: 1 != 3
+E             Use -v to get more diff
+
+radon/tests/test_raw.py:460: AssertionError
+=========================== short test summary info ============================
+FAILED radon/tests/test_ipynb.py::test_raw_ipynb - assert 1 == 37
+FAILED radon/tests/test_ipynb.py::test_raw_ipynb_cells - assert 0 == 27
+FAILED radon/tests/test_other_metrics.py::test_mi_visit[\n     def f(a, b, c):\n         return (a ** b) % c\n\n     k = f(1, 2, 3)\n     print(k ** 2 - 1)\n-75.40162245189028-True]
+FAILED radon/tests/test_other_metrics.py::test_mi_visit[\n     def f(a, b, c):\n         return (a ** b) % c\n\n     k = f(1, 2, 3)\n     print(k ** 2 - 1)\n-75.40162245189028-False]
+FAILED radon/tests/test_other_metrics.py::test_mi_visit[code4-93.84027450359395-True]
+FAILED radon/tests/test_other_metrics.py::test_mi_visit[code5-88.84176333569131-False]
+FAILED radon/tests/test_raw.py::test_logical[\n     a * b + c\n     -1] - Ass...
+FAILED radon/tests/test_raw.py::test_logical[\n     if a:\n     -1] - Asserti...
+FAILED radon/tests/test_raw.py::test_logical[\n     try:\n     -1] - Assertio...
+FAILED radon/tests/test_raw.py::test_logical[\n     if a:  # just a comment\n     -1]
+FAILED radon/tests/test_raw.py::test_logical[\n     try:  # just a comment\n     -1]
+FAILED radon/tests/test_raw.py::test_logical[\n     if a: pass\n     -2] - As...
+FAILED radon/tests/test_raw.py::test_logical[\n     if a: continue\n     -2]
+FAILED radon/tests/test_raw.py::test_logical[\n     if a: break\n     -2] - A...
+FAILED radon/tests/test_raw.py::test_logical[\n     if a: return\n     -2] - ...
+FAILED radon/tests/test_raw.py::test_logical[\n     if a: pass  # just a comment\n     -2]
+FAILED radon/tests/test_raw.py::test_logical[\n     if a: continue  # just a comment\n     -2]
+FAILED radon/tests/test_raw.py::test_logical[\n     if a: break  # just a comment\n     -2]
+FAILED radon/tests/test_raw.py::test_logical[\n     if a: return  # just a comment\n     -2]
+FAILED radon/tests/test_raw.py::test_logical[\n     42 # a comment\n     -1]
+FAILED radon/tests/test_raw.py::test_logical[\n     """\n     multiple\n     """\n     -1]
+FAILED radon/tests/test_raw.py::test_logical[\n     a = 2; b = 43\n     -2]
+FAILED radon/tests/test_raw.py::test_logical[\n     a = 2; b = 43; c = 42; d = 3; print(a)\n     -5]
+FAILED radon/tests/test_raw.py::test_analyze[\n     """\n     doc?\n     """\n     -expected1]
+FAILED radon/tests/test_raw.py::test_analyze[code2-expected2] - AssertionErro...
+FAILED radon/tests/test_raw.py::test_analyze[\n     if a:\n         print\n\n\n     else:\n         print\n     -expected4]
+FAILED radon/tests/test_raw.py::test_analyze[\n     def f(n):\n         """here"""\n         return n * f(n - 1)\n     -expected5]
+FAILED radon/tests/test_raw.py::test_analyze[code6-expected6] - AssertionErro...
+FAILED radon/tests/test_raw.py::test_analyze[code8-expected8] - AssertionErro...
+FAILED radon/tests/test_raw.py::test_analyze[code9-expected9] - AssertionErro...
+FAILED radon/tests/test_raw.py::test_analyze[code10-expected10] - AssertionEr...
+FAILED radon/tests/test_raw.py::test_analyze[code11-expected11] - AssertionEr...
+FAILED radon/tests/test_raw.py::test_analyze[code12-expected12] - AssertionEr...
+FAILED radon/tests/test_raw.py::test_analyze[code13-expected13] - AssertionEr...
+FAILED radon/tests/test_raw.py::test_analyze[code14-expected14] - AssertionEr...
+FAILED radon/tests/test_raw.py::test_analyze[code15-expected15] - AssertionEr...
+FAILED radon/tests/test_raw.py::test_analyze[\n    def function():\n        multiline_with_equals_in_it = """ """\n        pass\n    -expected16]
+FAILED radon/tests/test_raw.py::test_analyze[code17-expected17] - AssertionEr...
+FAILED radon/tests/test_raw.py::test_analyze[\n    def function():\n        """ this is not a """ """ docstring because it is concatenated """\n    -expected18]
+FAILED radon/tests/test_raw.py::test_analyze[\n    def function():\n        " this is not a multiline " \\\n            " docstring "\n    -expected19]
+FAILED radon/tests/test_raw.py::test_analyze[code20-expected20] - AssertionEr...
+FAILED radon/tests/test_raw.py::test_analyze[code21-expected21] - AssertionEr...
+FAILED radon/tests/test_raw.py::test_analyze[code22-expected22] - AssertionEr...
+FAILED radon/tests/test_raw.py::test_analyze[\n    def function():\n        pass; pass\n    -expected23]
+FAILED radon/tests/test_raw.py::test_analyze[\n    def function():\n        """ doc string """; pass\n    -expected24]
+45 failed, 359 passed in 0.26s

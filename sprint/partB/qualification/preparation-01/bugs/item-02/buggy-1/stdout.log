@@ -1,0 +1,246 @@
+........................................................................ [ 17%]
+........................................................................ [ 35%]
+....................FFFFF....FF.................F...............FFF.FFF. [ 53%]
+F....................................................................... [ 71%]
+........................................................................ [ 89%]
+............................................                             [100%]
+=================================== FAILURES ===================================
+_________ test_visitor_simple[\n    if a and b: pass\n    -3-kwargs4] __________
+
+code = '\n    if a and b: pass\n    ', expected = 3, kwargs = {}
+
+    @pytest.mark.parametrize('code,expected,kwargs', BLOCKS)
+    def test_visitor_simple(code, expected, kwargs):
+        visitor = ComplexityVisitor.from_code(dedent(code), **kwargs)
+>       assert visitor.complexity == expected
+E       assert 5 == 3
+E        +  where 5 = <radon.visitors.ComplexityVisitor object at 0x10b463ef0>.complexity
+
+radon/tests/test_complexity_visitor.py:419: AssertionError
+_ test_visitor_simple[\n    if a and b: pass\n    else: pass\n    -3-kwargs5] __
+
+code = '\n    if a and b: pass\n    else: pass\n    ', expected = 3, kwargs = {}
+
+    @pytest.mark.parametrize('code,expected,kwargs', BLOCKS)
+    def test_visitor_simple(code, expected, kwargs):
+        visitor = ComplexityVisitor.from_code(dedent(code), **kwargs)
+>       assert visitor.complexity == expected
+E       assert 5 == 3
+E        +  where 5 = <radon.visitors.ComplexityVisitor object at 0x10b463c20>.complexity
+
+radon/tests/test_complexity_visitor.py:419: AssertionError
+_ test_visitor_simple[\n     if a and b: pass\n     elif c and d: pass\n     else: pass\n     -5-kwargs6] _
+
+code = '\n     if a and b: pass\n     elif c and d: pass\n     else: pass\n     '
+expected = 5, kwargs = {}
+
+    @pytest.mark.parametrize('code,expected,kwargs', BLOCKS)
+    def test_visitor_simple(code, expected, kwargs):
+        visitor = ComplexityVisitor.from_code(dedent(code), **kwargs)
+>       assert visitor.complexity == expected
+E       assert 9 == 5
+E        +  where 9 = <radon.visitors.ComplexityVisitor object at 0x10b4631a0>.complexity
+
+radon/tests/test_complexity_visitor.py:419: AssertionError
+_ test_visitor_simple[\n     if a and b or c and d: pass\n     else: pass\n     -5-kwargs7] _
+
+code = '\n     if a and b or c and d: pass\n     else: pass\n     '
+expected = 5, kwargs = {}
+
+    @pytest.mark.parametrize('code,expected,kwargs', BLOCKS)
+    def test_visitor_simple(code, expected, kwargs):
+        visitor = ComplexityVisitor.from_code(dedent(code), **kwargs)
+>       assert visitor.complexity == expected
+E       assert 11 == 5
+E        +  where 11 = <radon.visitors.ComplexityVisitor object at 0x10b462810>.complexity
+
+radon/tests/test_complexity_visitor.py:419: AssertionError
+_ test_visitor_simple[\n     if a and b or c: pass\n     else: pass\n     -4-kwargs8] _
+
+code = '\n     if a and b or c: pass\n     else: pass\n     ', expected = 4
+kwargs = {}
+
+    @pytest.mark.parametrize('code,expected,kwargs', BLOCKS)
+    def test_visitor_simple(code, expected, kwargs):
+        visitor = ComplexityVisitor.from_code(dedent(code), **kwargs)
+>       assert visitor.complexity == expected
+E       assert 8 == 4
+E        +  where 8 = <radon.visitors.ComplexityVisitor object at 0x10b463560>.complexity
+
+radon/tests/test_complexity_visitor.py:419: AssertionError
+__ test_visitor_simple[\n     while a < 4 and b < 42: pass\n     -3-kwargs13] __
+
+code = '\n     while a < 4 and b < 42: pass\n     ', expected = 3, kwargs = {}
+
+    @pytest.mark.parametrize('code,expected,kwargs', BLOCKS)
+    def test_visitor_simple(code, expected, kwargs):
+        visitor = ComplexityVisitor.from_code(dedent(code), **kwargs)
+>       assert visitor.complexity == expected
+E       assert 5 == 3
+E        +  where 5 = <radon.visitors.ComplexityVisitor object at 0x10b3de120>.complexity
+
+radon/tests/test_complexity_visitor.py:419: AssertionError
+_ test_visitor_simple[\n     while a and b or c < 10: pass\n     else: pass\n     -5-kwargs14] _
+
+code = '\n     while a and b or c < 10: pass\n     else: pass\n     '
+expected = 5, kwargs = {}
+
+    @pytest.mark.parametrize('code,expected,kwargs', BLOCKS)
+    def test_visitor_simple(code, expected, kwargs):
+        visitor = ComplexityVisitor.from_code(dedent(code), **kwargs)
+>       assert visitor.complexity == expected
+E       assert 9 == 5
+E        +  where 9 = <radon.visitors.ComplexityVisitor object at 0x10b3de8d0>.complexity
+
+radon/tests/test_complexity_visitor.py:419: AssertionError
+_ test_visitor_simple[\n     sum(i for i in range(10) if i >= 2 and val and val2 or val3)\n     -6-kwargs32] _
+
+code = '\n     sum(i for i in range(10) if i >= 2 and val and val2 or val3)\n     '
+expected = 6, kwargs = {}
+
+    @pytest.mark.parametrize('code,expected,kwargs', BLOCKS)
+    def test_visitor_simple(code, expected, kwargs):
+        visitor = ComplexityVisitor.from_code(dedent(code), **kwargs)
+>       assert visitor.complexity == expected
+E       assert 10 == 6
+E        +  where 10 = <radon.visitors.ComplexityVisitor object at 0x10b463950>.complexity
+
+radon/tests/test_complexity_visitor.py:419: AssertionError
+________________ test_visitor_single_functions[code0-expected0] ________________
+
+code = '\n     def f(a, b, c):\n        if a and b == 4:\n            return c ** c\n        elif a and not c:\n            return sum(i for i in range(41) if i&1)\n        return a + b\n     '
+expected = (1, 7)
+
+    @pytest.mark.parametrize('code,expected', SINGLE_FUNCTIONS_CASES)
+    def test_visitor_single_functions(code, expected):
+        visitor = ComplexityVisitor.from_code(dedent(code))
+        assert len(visitor.functions) == 1
+>       assert (visitor.complexity, visitor.functions[0].complexity) == expected
+E       assert (1, 11) == (1, 7)
+E         
+E         At index 1 diff: 11 != 7
+E         Use -v to get more diff
+
+radon/tests/test_complexity_visitor.py:484: AssertionError
+________________ test_visitor_single_functions[code1-expected1] ________________
+
+code = '\n     if a and not b: pass\n     elif b or c: pass\n     else: pass\n\n     for i in range(4):\n        print(i)\n\n     def g(a, b):\n        while a < b:\n            b, a = a **2, b ** 2\n        return b\n     '
+expected = (6, 2)
+
+    @pytest.mark.parametrize('code,expected', SINGLE_FUNCTIONS_CASES)
+    def test_visitor_single_functions(code, expected):
+        visitor = ComplexityVisitor.from_code(dedent(code))
+        assert len(visitor.functions) == 1
+>       assert (visitor.complexity, visitor.functions[0].complexity) == expected
+E       assert (10, 2) == (6, 2)
+E         
+E         At index 0 diff: 10 != 6
+E         Use -v to get more diff
+
+radon/tests/test_complexity_visitor.py:484: AssertionError
+________________ test_visitor_single_functions[code2-expected2] ________________
+
+code = '\n     def f(a, b):\n        while a**b:\n            a, b = b, a * (b - 1)\n            if a and b:\n                b = 0\n            else:\n                b = 1\n        return sum(i for i in range(b))\n     '
+expected = (1, 5)
+
+    @pytest.mark.parametrize('code,expected', SINGLE_FUNCTIONS_CASES)
+    def test_visitor_single_functions(code, expected):
+        visitor = ComplexityVisitor.from_code(dedent(code))
+        assert len(visitor.functions) == 1
+>       assert (visitor.complexity, visitor.functions[0].complexity) == expected
+E       assert (1, 7) == (1, 5)
+E         
+E         At index 1 diff: 7 != 5
+E         Use -v to get more diff
+
+radon/tests/test_complexity_visitor.py:484: AssertionError
+___________________ test_visitor_functions[code0-expected0] ____________________
+
+code = '\n     def f(a, b):\n        return a if b else 2\n\n     def g(a, b, c):\n        if a and b:\n            return a ...c:\n            return b / c - c / b\n        return a + b + c\n\n     def h(a, b):\n        return 2 * (a + b)\n     '
+expected = (2, 5, 1)
+
+    @pytest.mark.parametrize('code,expected', FUNCTIONS_CASES)
+    def test_visitor_functions(code, expected):
+        visitor = ComplexityVisitor.from_code(dedent(code))
+        assert len(visitor.functions) == len(expected)
+>       assert tuple(map(GET_COMPLEXITY, visitor.functions)) == expected
+E       assert (2, 9, 1) == (2, 5, 1)
+E         
+E         At index 1 diff: 9 != 5
+E         Use -v to get more diff
+
+radon/tests/test_complexity_visitor.py:539: AssertionError
+___________________ test_visitor_functions[code1-expected1] ____________________
+
+code = '\n     def f(p, q):\n        while p:\n            p, q = q, p - q\n        if q < 1:\n            return 1 / q ** 2\...  k += sum(1 / j for j in range(i ** 2) if j > 2)\n                fobj.write(str(k))\n            return k - 1\n     '
+expected = (5, 9)
+
+    @pytest.mark.parametrize('code,expected', FUNCTIONS_CASES)
+    def test_visitor_functions(code, expected):
+        visitor = ComplexityVisitor.from_code(dedent(code))
+        assert len(visitor.functions) == len(expected)
+>       assert tuple(map(GET_COMPLEXITY, visitor.functions)) == expected
+E       assert (5, 15) == (5, 9)
+E         
+E         At index 1 diff: 15 != 9
+E         Use -v to get more diff
+
+radon/tests/test_complexity_visitor.py:539: AssertionError
+____________________ test_visitor_classes[code0-expected0] _____________________
+
+code = '\n     class A(object):\n\n         def m(self, a, b):\n             if not a or b:\n                 return b - 1\n ....m(k) < k:\n                 k -= self.m(k ** 2 - min(self.m(j) for j in range(k ** 4)))\n             return k\n     '
+expected = (8, 4, 3)
+
+    @pytest.mark.parametrize('code,expected', CLASSES_CASES)
+    def test_visitor_classes(code, expected):
+        total_class_complexity = expected[0]
+        methods_complexity = expected[1:]
+        visitor = ComplexityVisitor.from_code(dedent(code))
+        assert len(visitor.classes) == 1
+        assert len(visitor.functions) == 0
+        cls = visitor.classes[0]
+>       assert cls.real_complexity == total_class_complexity
+E       AssertionError: assert 10 == 8
+E        +  where 10 = Class(name='A', lineno=1, col_offset=0, endline=14, methods=[Function(name='m', lineno=3, col_offset=4, endline=9, is_...offset=4, endline=14, is_method=True, classname='A', closures=[], complexity=3)], inner_classes=[], real_complexity=10).real_complexity
+
+radon/tests/test_complexity_visitor.py:596: AssertionError
+_____________________ test_visitor_module[code0-expected0] _____________________
+
+code = '\n     if a and b:\n         print\n     else:\n         print\n     a = sum(i for i in range(1000) if i % 3 == 0 and...n n\n         elif n < 5:\n             return (n - 1) ** 2\n         return n * pow(inner(n), f(n - 1), n - 3)\n     '
+expected = (6, 3, 0, 9)
+
+    @pytest.mark.parametrize('code,expected', GENERAL_CASES)
+    def test_visitor_module(code, expected):
+        (
+            module_complexity,
+            functions_complexity,
+            classes_complexity,
+            total_complexity,
+        ) = expected
+    
+        visitor = ComplexityVisitor.from_code(dedent(code))
+        assert visitor.complexity, module_complexity
+        assert visitor.functions_complexity == functions_complexity
+        assert visitor.classes_complexity == classes_complexity
+>       assert visitor.total_complexity == total_complexity
+E       assert 13 == 9
+E        +  where 13 = <radon.visitors.ComplexityVisitor object at 0x10b453d10>.total_complexity
+
+radon/tests/test_complexity_visitor.py:672: AssertionError
+=========================== short test summary info ============================
+FAILED radon/tests/test_complexity_visitor.py::test_visitor_simple[\n    if a and b: pass\n    -3-kwargs4]
+FAILED radon/tests/test_complexity_visitor.py::test_visitor_simple[\n    if a and b: pass\n    else: pass\n    -3-kwargs5]
+FAILED radon/tests/test_complexity_visitor.py::test_visitor_simple[\n     if a and b: pass\n     elif c and d: pass\n     else: pass\n     -5-kwargs6]
+FAILED radon/tests/test_complexity_visitor.py::test_visitor_simple[\n     if a and b or c and d: pass\n     else: pass\n     -5-kwargs7]
+FAILED radon/tests/test_complexity_visitor.py::test_visitor_simple[\n     if a and b or c: pass\n     else: pass\n     -4-kwargs8]
+FAILED radon/tests/test_complexity_visitor.py::test_visitor_simple[\n     while a < 4 and b < 42: pass\n     -3-kwargs13]
+FAILED radon/tests/test_complexity_visitor.py::test_visitor_simple[\n     while a and b or c < 10: pass\n     else: pass\n     -5-kwargs14]
+FAILED radon/tests/test_complexity_visitor.py::test_visitor_simple[\n     sum(i for i in range(10) if i >= 2 and val and val2 or val3)\n     -6-kwargs32]
+FAILED radon/tests/test_complexity_visitor.py::test_visitor_single_functions[code0-expected0]
+FAILED radon/tests/test_complexity_visitor.py::test_visitor_single_functions[code1-expected1]
+FAILED radon/tests/test_complexity_visitor.py::test_visitor_single_functions[code2-expected2]
+FAILED radon/tests/test_complexity_visitor.py::test_visitor_functions[code0-expected0]
+FAILED radon/tests/test_complexity_visitor.py::test_visitor_functions[code1-expected1]
+FAILED radon/tests/test_complexity_visitor.py::test_visitor_classes[code0-expected0]
+FAILED radon/tests/test_complexity_visitor.py::test_visitor_module[code0-expected0]
+15 failed, 389 passed in 0.23s

@@ -1,0 +1,72 @@
+........................................................................ [ 17%]
+........................................................................ [ 35%]
+............FFF......................................................... [ 53%]
+........................................................................ [ 71%]
+........................................................................ [ 89%]
+............................................                             [100%]
+=================================== FAILURES ===================================
+_______________________ test_cc_visit[code0-1-1-f.inner] _______________________
+
+code = 'if a and b:\n    print\nelse:\n    print\na = sum(i for i in range(1000) if i % 3 == 0 and i % 5 == 0)\n\ndef f(n):\n...n == 1:\n        return n\n    elif n < 5:\n        return (n - 1) ** 2\n    return n * pow(inner(n), f(n - 1), n - 3)'
+number_of_blocks = 1, diff = 1, lookfor = 'f.inner'
+
+    @pytest.mark.parametrize('code,number_of_blocks,diff,lookfor', CC_VISIT_CASES)
+    def test_cc_visit(code, number_of_blocks, diff, lookfor):
+        code = dedent(code)
+    
+        blocks = cc_visit(code)
+        assert isinstance(blocks, list)
+        assert len(blocks) == number_of_blocks
+    
+        with_inner_blocks = add_inner_blocks(blocks)
+        names = set(map(operator.attrgetter('name'), with_inner_blocks))
+        assert len(with_inner_blocks) - len(blocks) == diff
+>       assert lookfor in names
+E       AssertionError: assert 'f.inner' in {'f', 'inner'}
+
+radon/tests/test_complexity_utils.py:109: AssertionError
+_______________________ test_cc_visit[code1-3-1-f.inner] _______________________
+
+code = 'try:\n    1 / 0\nexcept ZeroDivisionError:\n    print\nexcept TypeError:\n    pass\n\nclass J(object):\n\n    def aux...\n\ndef f(a, b):\n    def inner(n):\n        return n ** 2\n    if a < b:\n        b, a = a, inner(b)\n    return a, b'
+number_of_blocks = 3, diff = 1, lookfor = 'f.inner'
+
+    @pytest.mark.parametrize('code,number_of_blocks,diff,lookfor', CC_VISIT_CASES)
+    def test_cc_visit(code, number_of_blocks, diff, lookfor):
+        code = dedent(code)
+    
+        blocks = cc_visit(code)
+        assert isinstance(blocks, list)
+        assert len(blocks) == number_of_blocks
+    
+        with_inner_blocks = add_inner_blocks(blocks)
+        names = set(map(operator.attrgetter('name'), with_inner_blocks))
+        assert len(with_inner_blocks) - len(blocks) == diff
+>       assert lookfor in names
+E       AssertionError: assert 'f.inner' in {'J', 'aux', 'f', 'inner'}
+
+radon/tests/test_complexity_utils.py:109: AssertionError
+___________________ test_cc_visit[code2-2-4-joe1.joe2.joe3] ____________________
+
+code = 'class joe1:\n    i = 1\n    def doit1(self):\n        pass\n    class joe2:\n        ii = 2\n        def doit2(self):\n            pass\n        class joe3:\n            iii = 3\n            def doit3(self):\n                pass'
+number_of_blocks = 2, diff = 4, lookfor = 'joe1.joe2.joe3'
+
+    @pytest.mark.parametrize('code,number_of_blocks,diff,lookfor', CC_VISIT_CASES)
+    def test_cc_visit(code, number_of_blocks, diff, lookfor):
+        code = dedent(code)
+    
+        blocks = cc_visit(code)
+        assert isinstance(blocks, list)
+        assert len(blocks) == number_of_blocks
+    
+        with_inner_blocks = add_inner_blocks(blocks)
+        names = set(map(operator.attrgetter('name'), with_inner_blocks))
+        assert len(with_inner_blocks) - len(blocks) == diff
+>       assert lookfor in names
+E       AssertionError: assert 'joe1.joe2.joe3' in {'doit1', 'doit2', 'doit3', 'joe1', 'joe2', 'joe3'}
+
+radon/tests/test_complexity_utils.py:109: AssertionError
+=========================== short test summary info ============================
+FAILED radon/tests/test_complexity_utils.py::test_cc_visit[code0-1-1-f.inner]
+FAILED radon/tests/test_complexity_utils.py::test_cc_visit[code1-3-1-f.inner]
+FAILED radon/tests/test_complexity_utils.py::test_cc_visit[code2-2-4-joe1.joe2.joe3]
+3 failed, 401 passed in 0.22s

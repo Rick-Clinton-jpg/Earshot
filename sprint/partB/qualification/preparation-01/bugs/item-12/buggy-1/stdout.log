@@ -1,0 +1,421 @@
+........................................................................ [ 17%]
+........................................................................ [ 35%]
+........................................................................ [ 53%]
+.......................FF............................................... [ 71%]
+...............................................................F........ [ 89%]
+....................F..F.F.FFFFFFFFF........                             [100%]
+=================================== FAILURES ===================================
+________________________________ test_raw_ipynb ________________________________
+
+log_mock = <MagicMock name='log_result' id='4483040944'>
+
+    @pytest.mark.skipif(not SUPPORTS_IPYNB, reason="nbformat not installed")
+    def test_raw_ipynb(log_mock):
+        raw_cfg = cli.Config(**BASE_CONFIG_WITH_IPYNB.config_values)
+    
+        target = os.path.join(DIRNAME, 'data', 'example.ipynb')
+        harvester = RawHarvester([DIRNAME], raw_cfg)
+        out = json.loads(harvester.as_json())
+        assert harvester.config.include_ipynb == True
+        assert target in out
+>       assert out[target]['loc'] == 63
+E       assert 52 == 63
+
+radon/tests/test_ipynb.py:116: AssertionError
+_____________________________ test_raw_ipynb_cells _____________________________
+
+log_mock = <MagicMock name='log_result' id='4483053472'>
+
+    @pytest.mark.skipif(not SUPPORTS_IPYNB, reason="nbformat not installed")
+    def test_raw_ipynb_cells(log_mock):
+        raw_cfg = cli.Config(**BASE_CONFIG_WITH_IPYNB_AND_CELLS.config_values)
+    
+        target = os.path.join(DIRNAME, 'data', 'example.ipynb')
+        harvester = RawHarvester([DIRNAME], raw_cfg)
+        out = json.loads(harvester.as_json())
+        cell_target = target + ":[3]"
+        assert target in out
+        assert cell_target in out
+>       assert out[cell_target]['loc'] == 52
+E       assert 41 == 52
+
+radon/tests/test_ipynb.py:135: AssertionError
+_________________ test_mi_visit[code4-93.84027450359395-True] __________________
+
+code = "class A(object):\n\n    def __init__(self, n):\n        # this is awesome\n        self.n = sum(i for i in range(n) i...     return (self.n + 2) ** j\n        return (self.n - 2) ** j\n\na = A(4)\na.m(42)  # i don't know why, but it works"
+expected = 93.84027450359395, count_multi = True
+
+    @pytest.mark.parametrize('code,expected,count_multi', MI_VISIT_CASES)
+    def test_mi_visit(code, expected, count_multi):
+        code = dedent(code)
+        expected = expected
+        count_multi = count_multi
+>       assert mi_visit(code, count_multi) == expected
+E       assert 88.84176333569131 == 93.84027450359395
+E        +  where 88.84176333569131 = mi_visit("class A(object):\n\n    def __init__(self, n):\n        # this is awesome\n        self.n = sum(i for i in range(n) i...     return (self.n + 2) ** j\n        return (self.n - 2) ** j\n\na = A(4)\na.m(42)  # i don't know why, but it works", True)
+
+radon/tests/test_other_metrics.py:169: AssertionError
+________ test_analyze[\n     """\n     doc?\n     """\n     -expected1] ________
+
+code = '"""\ndoc?\n"""', expected = (3, 1, 0, 0, 3, 0, ...)
+
+    @pytest.mark.parametrize('code,expected', ANALYZE_CASES)
+    def test_analyze(code, expected):
+        code = dedent(code)
+    
+        try:
+            len(expected)
+        except:
+            with pytest.raises(expected):
+                analyze(code)
+        else:
+            result = analyze(code)
+>           assert result == Module(*expected)
+E           AssertionError: assert Module(loc=1,...le_comments=1) == Module(loc=3,...le_comments=0)
+E             
+E             Omitting 4 identical items, use -vv to show
+E             Differing attributes:
+E             ['loc', 'multi', 'single_comments']
+E             
+E             Drill down into differing attribute loc:
+E               loc: 1 != 3...
+E             
+E             ...Full output truncated, use '-vv' to show
+
+radon/tests/test_raw.py:460: AssertionError
+_ test_analyze[\n     if a:\n         print\n\n\n     else:\n         print\n     -expected4] _
+
+code = 'if a:\n    print\n\n\nelse:\n    print'
+expected = (6, 4, 4, 0, 0, 2, ...)
+
+    @pytest.mark.parametrize('code,expected', ANALYZE_CASES)
+    def test_analyze(code, expected):
+        code = dedent(code)
+    
+        try:
+            len(expected)
+        except:
+            with pytest.raises(expected):
+                analyze(code)
+        else:
+            result = analyze(code)
+>           assert result == Module(*expected)
+E           AssertionError: assert Module(loc=6,...le_comments=4) == Module(loc=6,...le_comments=0)
+E             
+E             Omitting 4 identical items, use -vv to show
+E             Differing attributes:
+E             ['sloc', 'blank', 'single_comments']
+E             
+E             Drill down into differing attribute sloc:
+E               sloc: 2 != 4...
+E             
+E             ...Full output truncated, use '-vv' to show
+
+radon/tests/test_raw.py:460: AssertionError
+________________________ test_analyze[code6-expected6] _________________________
+
+code = 'def hip(a, k):\n    if k == 1: return a\n    # getting high...\n    return a ** hip(a, k - 1)\n\ndef fib(n):\n    """...rly long time.\n    """\n    if n <= 1: return 1  # otherwise it will melt the cpu\n    return fib(n - 2) + fib(n - 1)'
+expected = (12, 9, 6, 2, 3, 2, ...)
+
+    @pytest.mark.parametrize('code,expected', ANALYZE_CASES)
+    def test_analyze(code, expected):
+        code = dedent(code)
+    
+        try:
+            len(expected)
+        except:
+            with pytest.raises(expected):
+                analyze(code)
+        else:
+            result = analyze(code)
+>           assert result == Module(*expected)
+E           AssertionError: assert Module(loc=9,...le_comments=3) == Module(loc=12...le_comments=1)
+E             
+E             Omitting 3 identical items, use -vv to show
+E             Differing attributes:
+E             ['loc', 'multi', 'blank', 'single_comments']
+E             
+E             Drill down into differing attribute loc:
+E               loc: 9 != 12...
+E             
+E             ...Full output truncated, use '-vv' to show
+
+radon/tests/test_raw.py:460: AssertionError
+________________________ test_analyze[code8-expected8] _________________________
+
+code = 'def foo(n=1):\n   """\n   Try it with n = 294942: it will take a fairly long time.\n   """\n   if n <= 1: return 1  # otherwise it will melt the cpu'
+expected = (5, 4, 2, 1, 3, 0, ...)
+
+    @pytest.mark.parametrize('code,expected', ANALYZE_CASES)
+    def test_analyze(code, expected):
+        code = dedent(code)
+    
+        try:
+            len(expected)
+        except:
+            with pytest.raises(expected):
+                analyze(code)
+        else:
+            result = analyze(code)
+>           assert result == Module(*expected)
+E           AssertionError: assert Module(loc=3,...le_comments=1) == Module(loc=5,...le_comments=0)
+E             
+E             Omitting 4 identical items, use -vv to show
+E             Differing attributes:
+E             ['loc', 'multi', 'single_comments']
+E             
+E             Drill down into differing attribute loc:
+E               loc: 3 != 5...
+E             
+E             ...Full output truncated, use '-vv' to show
+
+radon/tests/test_raw.py:460: AssertionError
+________________________ test_analyze[code9-expected9] _________________________
+
+code = 'def foo(n=1):\n   """\n   Try it with n = 294942: it will take a fairly long time.\n   """\n   if n <= 1: return 1  # otherwise it will melt the cpu\n   string = """This is a string not a comment"""'
+expected = (6, 5, 3, 1, 3, 0, ...)
+
+    @pytest.mark.parametrize('code,expected', ANALYZE_CASES)
+    def test_analyze(code, expected):
+        code = dedent(code)
+    
+        try:
+            len(expected)
+        except:
+            with pytest.raises(expected):
+                analyze(code)
+        else:
+            result = analyze(code)
+>           assert result == Module(*expected)
+E           AssertionError: assert Module(loc=4,...le_comments=1) == Module(loc=6,...le_comments=0)
+E             
+E             Omitting 4 identical items, use -vv to show
+E             Differing attributes:
+E             ['loc', 'multi', 'single_comments']
+E             
+E             Drill down into differing attribute loc:
+E               loc: 4 != 6...
+E             
+E             ...Full output truncated, use '-vv' to show
+
+radon/tests/test_raw.py:460: AssertionError
+_______________________ test_analyze[code10-expected10] ________________________
+
+code = 'def foo(n=1):\n   """\n   Try it with n = 294942: it will take a fairly long time.\n   """\n   if n <= 1: return 1  # otherwise it will melt the cpu\n   string = """\n            This is a string not a comment\n            """'
+expected = (8, 5, 5, 1, 3, 0, ...)
+
+    @pytest.mark.parametrize('code,expected', ANALYZE_CASES)
+    def test_analyze(code, expected):
+        code = dedent(code)
+    
+        try:
+            len(expected)
+        except:
+            with pytest.raises(expected):
+                analyze(code)
+        else:
+            result = analyze(code)
+>           assert result == Module(*expected)
+E           AssertionError: assert Module(loc=6,...le_comments=1) == Module(loc=8,...le_comments=0)
+E             
+E             Omitting 4 identical items, use -vv to show
+E             Differing attributes:
+E             ['loc', 'multi', 'single_comments']
+E             
+E             Drill down into differing attribute loc:
+E               loc: 6 != 8...
+E             
+E             ...Full output truncated, use '-vv' to show
+
+radon/tests/test_raw.py:460: AssertionError
+_______________________ test_analyze[code11-expected11] ________________________
+
+code = 'def foo(n=1):\n   """\n   Try it with n = 294942: it will take a fairly long time.\n   """\n   if n <= 1: return 1  # otherwise it will melt the cpu\n   string ="""\n           This is a string not a comment\n           """\n   test = 0'
+expected = (9, 6, 6, 1, 3, 0, ...)
+
+    @pytest.mark.parametrize('code,expected', ANALYZE_CASES)
+    def test_analyze(code, expected):
+        code = dedent(code)
+    
+        try:
+            len(expected)
+        except:
+            with pytest.raises(expected):
+                analyze(code)
+        else:
+            result = analyze(code)
+>           assert result == Module(*expected)
+E           AssertionError: assert Module(loc=7,...le_comments=1) == Module(loc=9,...le_comments=0)
+E             
+E             Omitting 4 identical items, use -vv to show
+E             Differing attributes:
+E             ['loc', 'multi', 'single_comments']
+E             
+E             Drill down into differing attribute loc:
+E               loc: 7 != 9...
+E             
+E             ...Full output truncated, use '-vv' to show
+
+radon/tests/test_raw.py:460: AssertionError
+_______________________ test_analyze[code12-expected12] ________________________
+
+code = 'def foo(n=1):\n   """\n   Try it with n = 294942: it will take a fairly long time.\n   """\n   if n <= 1: return 1  #...l melt the cpu\n   string = \\\n           """\n           This is a string not a comment\n           """\n   test = 0'
+expected = (10, 6, 7, 1, 3, 0, ...)
+
+    @pytest.mark.parametrize('code,expected', ANALYZE_CASES)
+    def test_analyze(code, expected):
+        code = dedent(code)
+    
+        try:
+            len(expected)
+        except:
+            with pytest.raises(expected):
+                analyze(code)
+        else:
+            result = analyze(code)
+>           assert result == Module(*expected)
+E           AssertionError: assert Module(loc=8,...le_comments=1) == Module(loc=10...le_comments=0)
+E             
+E             Omitting 4 identical items, use -vv to show
+E             Differing attributes:
+E             ['loc', 'multi', 'single_comments']
+E             
+E             Drill down into differing attribute loc:
+E               loc: 8 != 10...
+E             
+E             ...Full output truncated, use '-vv' to show
+
+radon/tests/test_raw.py:460: AssertionError
+_______________________ test_analyze[code13-expected13] ________________________
+
+code = 'def foo(n=1):\n   """\n   Try it with n = 294942: it will take a fairly long time.\n   """\n   if n <= 1: return 1  #...u\n   string =\\\n           """\n           This is a string not a comment\n           """\n   test = 0\n   # Comment'
+expected = (11, 6, 7, 2, 3, 0, ...)
+
+    @pytest.mark.parametrize('code,expected', ANALYZE_CASES)
+    def test_analyze(code, expected):
+        code = dedent(code)
+    
+        try:
+            len(expected)
+        except:
+            with pytest.raises(expected):
+                analyze(code)
+        else:
+            result = analyze(code)
+>           assert result == Module(*expected)
+E           AssertionError: assert Module(loc=9,...le_comments=2) == Module(loc=11...le_comments=1)
+E             
+E             Omitting 4 identical items, use -vv to show
+E             Differing attributes:
+E             ['loc', 'multi', 'single_comments']
+E             
+E             Drill down into differing attribute loc:
+E               loc: 9 != 11...
+E             
+E             ...Full output truncated, use '-vv' to show
+
+radon/tests/test_raw.py:460: AssertionError
+_______________________ test_analyze[code14-expected14] ________________________
+
+code = 'def foo(n=1):\n   """\n   Try it with n = 294942: it will take a fairly long time.\n   """\n   if n <= 1: return 1  #...l melt the cpu\n   test = 0\n   string = \\\n           """\n           This is a string not a comment\n           """'
+expected = (10, 6, 7, 1, 3, 0, ...)
+
+    @pytest.mark.parametrize('code,expected', ANALYZE_CASES)
+    def test_analyze(code, expected):
+        code = dedent(code)
+    
+        try:
+            len(expected)
+        except:
+            with pytest.raises(expected):
+                analyze(code)
+        else:
+            result = analyze(code)
+>           assert result == Module(*expected)
+E           AssertionError: assert Module(loc=8,...le_comments=1) == Module(loc=10...le_comments=0)
+E             
+E             Omitting 4 identical items, use -vv to show
+E             Differing attributes:
+E             ['loc', 'multi', 'single_comments']
+E             
+E             Drill down into differing attribute loc:
+E               loc: 8 != 10...
+E             
+E             ...Full output truncated, use '-vv' to show
+
+radon/tests/test_raw.py:460: AssertionError
+_______________________ test_analyze[code15-expected15] ________________________
+
+code = 'def function(\n    args\n):\n    """This is a multi-line docstring\n    for the function\n    """\n    pass'
+expected = (7, 3, 4, 0, 3, 0, ...)
+
+    @pytest.mark.parametrize('code,expected', ANALYZE_CASES)
+    def test_analyze(code, expected):
+        code = dedent(code)
+    
+        try:
+            len(expected)
+        except:
+            with pytest.raises(expected):
+                analyze(code)
+        else:
+            result = analyze(code)
+>           assert result == Module(*expected)
+E           AssertionError: assert Module(loc=5,...le_comments=2) == Module(loc=7,...le_comments=0)
+E             
+E             Omitting 3 identical items, use -vv to show
+E             Differing attributes:
+E             ['loc', 'sloc', 'multi', 'single_comments']
+E             
+E             Drill down into differing attribute loc:
+E               loc: 5 != 7...
+E             
+E             ...Full output truncated, use '-vv' to show
+
+radon/tests/test_raw.py:460: AssertionError
+_ test_analyze[\n    def function():\n        multiline_with_equals_in_it = """ """\n        pass\n    -expected16] _
+
+code = 'def function():\n    multiline_with_equals_in_it = """ """\n    pass'
+expected = (3, 3, 3, 0, 0, 0, ...)
+
+    @pytest.mark.parametrize('code,expected', ANALYZE_CASES)
+    def test_analyze(code, expected):
+        code = dedent(code)
+    
+        try:
+            len(expected)
+        except:
+            with pytest.raises(expected):
+                analyze(code)
+        else:
+            result = analyze(code)
+>           assert result == Module(*expected)
+E           AssertionError: assert Module(loc=3,...le_comments=1) == Module(loc=3,...le_comments=0)
+E             
+E             Omitting 5 identical items, use -vv to show
+E             Differing attributes:
+E             ['sloc', 'single_comments']
+E             
+E             Drill down into differing attribute sloc:
+E               sloc: 2 != 3...
+E             
+E             ...Full output truncated, use '-vv' to show
+
+radon/tests/test_raw.py:460: AssertionError
+=========================== short test summary info ============================
+FAILED radon/tests/test_ipynb.py::test_raw_ipynb - assert 52 == 63
+FAILED radon/tests/test_ipynb.py::test_raw_ipynb_cells - assert 41 == 52
+FAILED radon/tests/test_other_metrics.py::test_mi_visit[code4-93.84027450359395-True]
+FAILED radon/tests/test_raw.py::test_analyze[\n     """\n     doc?\n     """\n     -expected1]
+FAILED radon/tests/test_raw.py::test_analyze[\n     if a:\n         print\n\n\n     else:\n         print\n     -expected4]
+FAILED radon/tests/test_raw.py::test_analyze[code6-expected6] - AssertionErro...
+FAILED radon/tests/test_raw.py::test_analyze[code8-expected8] - AssertionErro...
+FAILED radon/tests/test_raw.py::test_analyze[code9-expected9] - AssertionErro...
+FAILED radon/tests/test_raw.py::test_analyze[code10-expected10] - AssertionEr...
+FAILED radon/tests/test_raw.py::test_analyze[code11-expected11] - AssertionEr...
+FAILED radon/tests/test_raw.py::test_analyze[code12-expected12] - AssertionEr...
+FAILED radon/tests/test_raw.py::test_analyze[code13-expected13] - AssertionEr...
+FAILED radon/tests/test_raw.py::test_analyze[code14-expected14] - AssertionEr...
+FAILED radon/tests/test_raw.py::test_analyze[code15-expected15] - AssertionEr...
+FAILED radon/tests/test_raw.py::test_analyze[\n    def function():\n        multiline_with_equals_in_it = """ """\n        pass\n    -expected16]
+15 failed, 389 passed in 0.22s

@@ -1,0 +1,27 @@
+........................................................................ [ 17%]
+........................................................................ [ 35%]
+........................................................................ [ 53%]
+........................................................................ [ 71%]
+..........................................................F............. [ 89%]
+............................................                             [100%]
+=================================== FAILURES ===================================
+________________________ test_h_visit[code1-expected1] _________________________
+
+code = 'a = b + c\nd = c - f\n\ndef f(b):\n    a = 2 - 4\n    d = a + b\n    return a ** d'
+expected = ((3, 8, 5, 10, 11, 15, ...), [('f', (3, 5, 3, 6, 8, 9, ...))])
+
+    @pytest.mark.parametrize('code,expected', H_VISIT_CASES)
+    def test_h_visit(code, expected):
+        code = dedent(code)
+        # test for almost-equality
+        for act, exp in zip(h_visit(code), expected):
+            for a, e in zip(act, exp):
+>               assert a == e or int(a * 10 ** 3) == int(e * 10 ** 3)
+E               assert (0.9375 == 1.875 or 937 == 1875)
+E                +  where 937 = int((0.9375 * (10 ** 3)))
+E                +  and   1875 = int((1.875 * (10 ** 3)))
+
+radon/tests/test_other_metrics.py:105: AssertionError
+=========================== short test summary info ============================
+FAILED radon/tests/test_other_metrics.py::test_h_visit[code1-expected1] - ass...
+1 failed, 403 passed in 0.20s
