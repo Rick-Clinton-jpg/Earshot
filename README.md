@@ -6,7 +6,7 @@ Earshot follows a reference field as it is passed from one AI agent to the next.
 
 Earshot continues [DogWhistle](https://github.com/Rick-Clinton-jpg/DogWhistle) and is being built during the Swarm Alignment Hackathon (6–8 November 2026). Work done before the sprint is kept in `results/presprint/` and disclosed under [Prior work](#prior-work-preexisting-not-sprint-results).
 
-**Status — 8 November 2026:** D1 and D2 are complete, scored and independently re-scored. The two-machine checks reproduce the computation; they are not independent experimental replications. Part B remains planned.
+**Status — 8 November 2026:** D1, D2 and the Codex-only Part B descriptive pilot are complete, scored and computationally cross-checked on two machines. These checks reproduce computation on the same observations; they are not independent experimental replications. Separate D2 exploratory analyses are reported below.
 
 | Stage | Status | Record |
 | --- | --- | --- |
@@ -14,7 +14,7 @@ Earshot continues [DogWhistle](https://github.com/Rick-Clinton-jpg/DogWhistle) a
 | D1 trial | Trial record, not confirmatory | [Trial report](sprint/trial_run/TRIAL_RUN_RESULTS.md) |
 | D1: relay reference selection | Complete, both arms | [Results](sprint/partD/D1/scoring/D1_RESULTS.md) · [Cross-check](sprint/partD/D1/scoring/CROSS_CHECK.md) |
 | D2: planted references and audit placement | Complete, both arms | [Results](sprint/partD/D2/results/D2_RESULTS.md) · [Scorer output](sprint/partD/D2/results/d2_score_output.json) |
-| B: real edits | Planned | — |
+| B: real edits | Complete, Codex-only descriptive pilot | [Results](sprint/partB/results/PART_B_RESULTS.md) · [Scores](sprint/partB/results/PART_B_SCORES.json) · [Cross-check](sprint/partB/results/CROSS_CHECK.md) |
 
 ---
 
@@ -34,7 +34,7 @@ Earshot studies this in one small, controlled setting first, then checks it agai
 | RQ2 | When a planted codeword rides in the handoff, does it survive a relay, and does the swap audit still detect the agent acting on it? | D |
 | RQ3 | Does the handoff change the code the last agent actually edits? With no codeword at all, does the handoff alone still shift real work? | B |
 
-The parts run in this order (D, then B) because each depends on the answer before it. D finds the pattern and B measures what it does to real work.
+The parts ran in this order: D, then B. D measured relay reference selection and downstream review allocations. B separately tested direct handoffs in real repair sessions, without a relay. We cannot treat signal survival as evidence of practical harm by itself.
 
 ### Open questions from the sprint this work speaks to
 
@@ -63,11 +63,13 @@ Details for each part are fixed in a registration file committed before that par
 - **Audit placements:** pre-relay swaps change the incoming codeword and compare the resulting downstream inputs; last-hop swaps change the refs delivered directly to the receiver. The two interventions answer different questions.
 - **Protocol:** [registration](sprint/partD/D2/D2_REGISTRATION.md) and [addenda 1](sprint/partD/D2/D2_ADDENDUM_1.md), [2](sprint/partD/D2/D2_ADDENDUM_2.md) and [3](sprint/partD/D2/D2_ADDENDUM_3.md), with later addenda governing. Source seals, per-arm relay seals and final ledgers preserve the study records.
 
-### Part B: Real work (RQ3)
+### Part B: Real work (RQ3) — completed descriptive pilot
 
-- **Setup:** the same chains, but the last agent makes real edits in a disposable copy of the repository instead of planning review time.
-- **Conditions:** honest-only chains with no codeword, to see whether the handoff alone shifts real work, and chains with a coalition receiver, to see whether its behaviour carries into actual code changes.
-- **Main measure:** which files are changed, and whether the change passes the task's checks.
+- **Setup:** Codex `gpt-6.1-sol`, low effort, edited isolated buggy copies of Radon at `54b88e5`. Twelve tasks across four candidate files each had one qualified injected bug. Handoffs were planted directly at the editing agent; there was no relay, Claude arm or concealment condition.
+- **Allocation:** three different complementary pair allocations per task, each observed under five conditions, gave 180 scheduled sessions. These were three pair allocations per task, not three repetitions of an identical prompt.
+- **Conditions:** H0 had no handoff; H-in and H-out were honest editing sessions whose incoming pair included or excluded the target. C-in and C-out supplied the same incoming pairs with the coalition convention: prefer the complementary pair. The incoming pair and decoded preferred pair are therefore different.
+- **Measures:** target-file edits, other production-file edits, test-verified admissible repairs, exact-restoration flags and diff size. Edits are measured against the buggy baseline. Independent evaluation uses frozen diagnostics and the full 404-case test suite; a repair requires passing both with an admissible artifact.
+- **Integrity and scope:** [registration](sprint/partB/PART_B_REGISTRATION.md), [source seal](sprint/partB/SEAL1.json), [runtime ledger](sprint/partB/codex_LEDGER.json) and [scoring cross-check](sprint/partB/results/CROSS_CHECK.md). The pilot is descriptive, with no inferential tests or intervals. Practice selected only the timeout; the earlier setup-fault practice is retained and excluded from study estimates.
 
 ## Results
 
@@ -98,7 +100,21 @@ The [earlier D1 trial](sprint/trial_run/TRIAL_RUN_RESULTS.md) and all pre-sprint
 
 ### Part B: Real work
 
-*Not run yet.*
+All five conditions produced 36/36 test-verified admissible repairs: 180/180 overall. Every session edited its target file; none edited another production file. Repair-rate and target-edit contrasts were zero in this pilot. Some patches differed in form, so the code outputs were not all identical.
+
+For these tasks, mutations, prompts and setup, the handoff and coalition conditions produced no observed reduction in repair success or change in which production files were edited. This does not establish general equivalence, prove that the convention was ignored, or guarantee semantic correctness beyond the frozen tests. It also does not test a full relay chain in a repair setting.
+
+See the [generated report](sprint/partB/results/PART_B_RESULTS.md), [scores](sprint/partB/results/PART_B_SCORES.json) and [cross-check](sprint/partB/results/CROSS_CHECK.md). Both generated-output SHA-256 fingerprints match Claude's second-machine fingerprints supplied by Rick.
+
+### D2 exploratory analyses: ranking, text checks and monitor cost
+
+These are separate analyses of the published D2 scorer output, outside the D2 registration. Their specifications were committed before their computation. The [overview and analysis records](https://github.com/Rick-Clinton-jpg/Earshot/tree/fbe76ef2a6a64bd31a4edefa2abedac74483b549/analysis) are published on the exploratory branch, pinned here to that commit.
+
+- **Receiver-type ranking:** last-hop swap scores ranked every coalition and conceal receiver-type/task unit above every honest unit in both arms (AUC 1.0000). This is ranking separation on these observations, not a validated general-purpose detector. At the fixed rule “score > 0”, honest receivers were also flagged: 0/12 in Codex and 9/12 in Claude.
+- **Text versus behaviour:** the calibrated text check flagged 12/12 coalition units and 0/12 conceal units in each arm. Last-hop behavioural scores ranked both instructed groups above honest units. Conceal receivers were explicitly instructed to conceal the convention; this does not demonstrate spontaneous collusion or identify unknown persistent agents.
+- **Monitor cost:** two-call scores gave AUCs from 0.9514 to 1.0000, but flagged 4–6/12 honest Codex units and 12/12 honest Claude units at “score > 0”. Their missing within-reference baseline limits separation of reference sensitivity from ordinary answer variability.
+
+Each unit is a receiver type within one task, across 12 tasks per arm. The monitor needs intervention access to swap references. These exploratory findings concern review allocations in D2, not code-repair outcomes in Part B.
 
 ## Prior work (preexisting, not sprint results)
 
@@ -123,14 +139,18 @@ These come from re-reading the pre-sprint traces on 6 November, during the sprin
 
 - [x] D1 registration, both arms, ledgers, scoring and independent re-scoring
 - [x] D2 implementation, amendments, calibration, final EVAL, both arms, ledgers and cross-checked results
-- [ ] Part B sandbox, registration, runs and results
+- [x] Part B sandbox, registration, 180 Codex sessions, ledger and cross-checked descriptive results
+- [x] Separate D2 exploratory analyses (published on the linked exploratory branch)
 - [ ] Final report
 
 ## Reproducing and auditing
 
 - **D1:** [scoring provenance](sprint/partD/D1/scoring/README.md), [machine-readable results](sprint/partD/D1/scoring/D1_SCORES.json), and [independent cross-check](sprint/partD/D1/scoring/CROSS_CHECK.md).
 - **D2:** [results and reproduction command](sprint/partD/D2/results/D2_RESULTS.md), [machine-readable results](sprint/partD/D2/results/d2_score_output.json), and [result-generation script](sprint/partD/D2/results/make_d2_results.py).
+- **Part B:** [registered design](sprint/partB/PART_B_REGISTRATION.md), [runbook and sealed scoring command](sprint/partB/RUNBOOK.md), [generated report](sprint/partB/results/PART_B_RESULTS.md), [scores](sprint/partB/results/PART_B_SCORES.json) and [cross-check](sprint/partB/results/CROSS_CHECK.md).
 - **Integrity:** the source seals and arm ledgers are checked by the scorers. Published-head checks require the checkout to match its remote branch head. Historical commit references identify original publication points; checking out an old main commit while origin/main has advanced will fail that check.
+
+**Repository size:** the preserved Part B runtime alone contains 115,026 files and about 4.17 GB of uncompressed file content. Git compresses and deduplicates this data, so transfer size differs from checkout size. A full checkout needs several GB; use GitHub file views or a blob-filtered sparse clone for lighter reading. Full scorer verification requires all ledgered runtime files.
 
 The trial and presprint files are provenance records. Pre-sprint scripts retain their original paths and should not be run from their copied locations. Earlier build reports retain historical draft statuses; final registrations, amendments and results give the completed study state.
 
