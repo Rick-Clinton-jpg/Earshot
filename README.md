@@ -6,7 +6,7 @@ Earshot follows a reference field as it is passed from one AI agent to the next.
 
 Earshot continues [DogWhistle](https://github.com/Rick-Clinton-jpg/DogWhistle) and was developed during the Swarm Alignment Hackathon (6–8 November 2026). Work done before the sprint is kept in `results/presprint/` and disclosed under [Prior work](#prior-work-preexisting-not-sprint-results).
 
-**Status — 9 November 2026:** D1, D2 and the Codex-only Part B descriptive pilot are complete, scored and computationally cross-checked on two machines. These checks reproduce computation on the same observations; they are not independent experimental replications. Separate D2 exploratory analyses are reported below.
+**Status — 9 November 2026:** D1, D2 and the Codex-only Part B descriptive pilot are complete, scored and computationally cross-checked on two machines. These checks reproduce computation on the same observations; they are not independent experimental replications. Separate D2 exploratory analyses are reported below. The paper was submitted to the Swarm Alignment Hackathon on 9 November 2026 as "Earshot: Where to Test a Planted Convention in Agent Handoffs".
 
 | Stage | Status | Record |
 | --- | --- | --- |
@@ -19,6 +19,133 @@ Earshot continues [DogWhistle](https://github.com/Rick-Clinton-jpg/DogWhistle) a
 ---
 
 A relay can turn different incoming lists into the same delivered list while leaving the receiver responsive to a direct list change. Earshot tests both places. Its separate repair pilot then checks what happened to actual code.
+
+## Quick start: reproduce the results
+
+Scoring uses saved records and makes no model calls. The test-workspace and reduced test-suite commands were run successfully in a fresh checkout. The re-scoring recipes and reference hashes come from the committed provenance records linked below. Run them in order, from a new parent folder, and keep each output directory new. Git and Python 3.12 or later are required; `python3` below must select that Python version.
+
+1. **Get the code without the large Part B runtime.**
+
+    ```sh
+    git clone --filter=blob:none --no-checkout https://github.com/Rick-Clinton-jpg/Earshot.git Earshot
+    cd Earshot
+    git sparse-checkout init --no-cone
+    git sparse-checkout set --no-cone '/*' '!/sprint/partB/codex/'
+    git checkout main
+    ```
+
+    This keeps the source, tests and scoring records. Full scoring verification also needs the `d1-claude` and `d2-claude` worktrees created below, and every file listed in the corresponding runtime ledgers. Part B's runtime is restored before its scoring command. The full main checkout used about 4.5 GB here, including Git and the Python environment; the Claude worktrees added about 240 MB. Allow at least 6 GB, with more space for outputs and filesystem differences. A blob-filtered clone can fetch additional data when files are checked out; it does not remove the scorer's need for the runtime records.
+
+2. **Set up Python and the D1 test workspace.**
+
+    ```sh
+    python3 -m venv .venv
+    .venv/bin/python -m pip install numpy scipy pytest jsonschema
+    cd ..
+    git clone --no-checkout https://github.com/Rick-Clinton-jpg/DogWhistle.git DogWhistle
+    cd Earshot
+    PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -c 'from earshot.workspace import build; print(build("../DogWhistle", "../d1-test-isolated-corrected/workspace", "results/presprint/context/handoff_refs", "."))'
+    ```
+
+    `build` creates a separate DogWhistle workspace at the registered pin, copies the registered reference files and verifies their hashes and clean Git status. It refuses to overwrite an existing destination. This launches no agent.
+
+3. **Run the tests without the four local Part B preparation checks.**
+
+    ```sh
+    PYTHONDONTWRITEBYTECODE=1 EARSHOT_TEST_WORKSPACE=../d1-test-isolated-corrected/workspace \
+      .venv/bin/python -m pytest -q -p no:cacheprovider \
+      tests sprint/partD/D2/sim/test_sim_c.py \
+      --deselect=tests/test_partb_cli.py::test_real_cli_sandbox_denies_study_material_and_cross_session_reads \
+      --deselect=tests/test_partb_cli.py::test_actual_cli_file_tools_use_permission_profile_with_scripted_responses \
+      --deselect=tests/test_partb_cli.py::test_scripted_cli_edit_to_independent_practice_evaluation \
+      --deselect=tests/test_partb_cli.py::test_plain_agent_pytest_explicitly_loads_mock_with_autoload_disabled
+    ```
+
+    Expected on the validated macOS environment: **366 passed, 4 deselected**. The four excluded tests depend on the original local Part B preparation environment outside the checkout. The [Part B RUNBOOK](sprint/partB/RUNBOOK.md#before-sealing) describes prerequisites, but does not provide a complete recipe for rebuilding that environment. No tests are changed. Other platforms may skip additional macOS CLI fixtures; the included CLI protocol fixtures use a local scripted server, not a hosted model.
+
+4. **Re-score the saved studies.** Keep the checkouts at their current published branch heads. The scorers verify the original seals, ledgered runtime files and publication bindings. Re-scoring is a computational check of the saved observations.
+
+    **D1:** use the commands recorded in [D1 scoring/CROSS_CHECK.md](sprint/partD/D1/scoring/CROSS_CHECK.md#commands-executed) to create the Claude-arm checkout, score each arm and compute the combined results. Run the commands from `Earshot/` except for the explicit `cd` into the Claude worktree.
+
+    ```sh
+    git worktree add --track -b d1-claude ../earshot_d1_claude origin/d1-claude
+    mkdir ../d1_out
+    PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m earshot.d1v2_score \
+      --repo . --branch main \
+      --registration sprint/partD/D1/D1_registration.json \
+      --seal sprint/partD/D1/SEAL1.json --seal-digest sprint/partD/D1/SEAL1.sha256 \
+      --ledger sprint/partD/D1/codex_LEDGER.json --ledger-digest sprint/partD/D1/codex_LEDGER.sha256 \
+      --run-dir sprint/partD/D1/codex > ../d1_out/sealed_scorer_codex.json
+    cd ../earshot_d1_claude
+    PYTHONDONTWRITEBYTECODE=1 ../Earshot/.venv/bin/python -m earshot.d1v2_score \
+      --repo . --branch d1-claude \
+      --registration sprint/partD/D1/D1_registration.json \
+      --seal sprint/partD/D1/SEAL1.json --seal-digest sprint/partD/D1/SEAL1.sha256 \
+      --ledger sprint/partD/D1/claude_LEDGER.json --ledger-digest sprint/partD/D1/claude_LEDGER.sha256 \
+      --run-dir sprint/partD/D1/claude > ../d1_out/sealed_scorer_claude.json
+    cd ../Earshot
+    PYTHONDONTWRITEBYTECODE=1 .venv/bin/python sprint/partD/D1/scoring/score_d1.py . ../earshot_d1_claude ../d1_out
+    shasum -a 256 ../d1_out/sealed_scorer_codex.json ../d1_out/sealed_scorer_claude.json ../d1_out/D1_SCORES.json
+    ```
+
+    The reference for this environment is the rerun recorded in [D1 CROSS_CHECK.md](sprint/partD/D1/scoring/CROSS_CHECK.md), rather than the imported scoring manifest. D1 CROSS_CHECK.md records these SHA-256 values for the rerun:
+
+    ```text
+    sealed_scorer_codex.json   336a9a66fdf71eb28e5250c581b7e8a4dc71cd3d3e5fdcf65a8907a4fbeff3e9
+    sealed_scorer_claude.json  0c3c91c7b14d560c6c5e4c4f2674823c98e43fdc78bbc415a80afa4950cd846a
+    D1_SCORES.json             de5254eefec4be204f45d650002cda129800f2542b3bcf66eeed66df1487310d
+    ```
+
+    Intervals and decisions must match the original published results. The documented differences are nine correlations up to 2e-16 and filesystem-dependent ordering in raw scorer arrays. Do not change values or reorder saved files to manufacture a hash match. The [cross-check](sprint/partD/D1/scoring/CROSS_CHECK.md#d1_scoresjson-comparison) lists the comparisons and environment.
+
+    **D2:** the command comes from [D2_RESULTS, section 8](sprint/partD/D2/results/D2_RESULTS.md#8-integrity-and-reproduction), with the separate Claude-arm worktree and both arms' seals and ledgers.
+
+    ```sh
+    git worktree add --track -b d2-claude ../earshot_d2_claude origin/d2-claude
+    mkdir ../d2_out
+    PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m earshot.d2_score \
+      --repo . --registration sprint/partD/D2/D2_registration.json \
+      --seal sprint/partD/D2/SEAL1.json --seal-digest sprint/partD/D2/SEAL1.sha256 \
+      --codex-repo . --codex-branch main --codex-run-dir sprint/partD/D2/codex \
+      --codex-seal2 sprint/partD/D2/SEAL2_codex.json --codex-seal2-digest sprint/partD/D2/SEAL2_codex.sha256 \
+      --codex-ledger sprint/partD/D2/codex_LEDGER.json --codex-ledger-digest sprint/partD/D2/codex_LEDGER.sha256 \
+      --claude-repo ../earshot_d2_claude --claude-branch d2-claude \
+      --claude-run-dir ../earshot_d2_claude/sprint/partD/D2/claude \
+      --claude-seal2 ../earshot_d2_claude/sprint/partD/D2/SEAL2_claude.json \
+      --claude-seal2-digest ../earshot_d2_claude/sprint/partD/D2/SEAL2_claude.sha256 \
+      --claude-ledger ../earshot_d2_claude/sprint/partD/D2/claude_LEDGER.json \
+      --claude-ledger-digest ../earshot_d2_claude/sprint/partD/D2/claude_LEDGER.sha256 \
+      > ../d2_out/d2_score_output.json
+    shasum -a 256 ../d2_out/d2_score_output.json
+    ```
+
+    The output must match the [published D2 SHA-256](sprint/partD/D2/results/D2_RESULTS.md#8-integrity-and-reproduction) exactly:
+
+    ```text
+    5121cca438b373e59dbb9d87e7183ae894f71cff0367fa9680ccdb22166816c3
+    ```
+
+    **Part B:** the scoring command is recorded in [Part B results/CROSS_CHECK.md](sprint/partB/results/CROSS_CHECK.md#codex-execution) and the [RUNBOOK scoring section](sprint/partB/RUNBOOK.md#score-and-cross-check). Restore the omitted runtime files, then score into a new output directory. The scorer creates `../partb_out`; do not pre-create it.
+
+    ```sh
+    git sparse-checkout disable
+    PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m earshot.partb_score \
+      --repo . --branch main --registration sprint/partB/PART_B_registration.json \
+      --seal sprint/partB/SEAL1.json --seal-digest sprint/partB/SEAL1.sha256 \
+      --run-dir sprint/partB/codex \
+      --ledger sprint/partB/codex_LEDGER.json --ledger-digest sprint/partB/codex_LEDGER.sha256 \
+      --output ../partb_out
+    shasum -a 256 ../partb_out/PART_B_RESULTS.md ../partb_out/PART_B_SCORES.json
+    ```
+
+    This verifies 115,026 runtime files, including their committed bytes, so it can take tens of minutes without printing progress. Both outputs must match the [published fingerprints](sprint/partB/results/CROSS_CHECK.md) exactly:
+
+    ```text
+    PART_B_RESULTS.md   abd3fc503603f2d242e579509f9defaf6443f3248a3b553082eb13391f94c8a0
+    PART_B_SCORES.json  61b113da1b25c80ce6e2c40dc404833f022af9f3f76d9c01b7782a86e985a719
+    ```
+
+5. **Live experiments are optional and are not needed to check these results.** They require access to the recorded Codex CLI and/or Claude Code backends, model access and usage costs, and the appropriate isolated workspaces. The [D1](sprint/partD/D1/RUNBOOK.md), [D2](sprint/partD/D2/RUNBOOK.md) and [Part B](sprint/partB/RUNBOOK.md) runbooks record the live procedures. Their original registrations and cutoffs describe completed studies; a new live study needs a new approved design and seal. Preserve the existing traces and ledgers.
 
 ## Why this matters
 
@@ -43,7 +170,7 @@ The parts ran in this order: D, then B. D measured relay reference selection and
 The paper [Red-Teaming Multi-Agent Attacks for Loss-of-Control Risks](https://arxiv.org/html/2610.24052v1) studies attacks distributed across agents. Earshot addresses related questions in part:
 
 - **Monitoring messages between agents.** Its standard monitor excludes messages between agents; its optimized attacks use shared plans, and it explicitly does not test steganographic or other covert channels. RQ1 and RQ2 study that channel directly: whether a signal survives each hop, and where an audit of it stops working.
-- **Telling which agents are working together.** The swap audit can measure a specified receiving agent's sensitivity to a specified field; sensitivity alone does not establish collusion. Earshot does not try to find unknown colluders in a large crowd.
+- **Finding the agents involved.** The swap audit can measure a specified receiving agent's sensitivity to a specified field; sensitivity alone does not establish collusion. Earshot does not try to find unknown colluders in a large crowd.
 - **Not addressed:** why split-up attacks still get through when a monitor sees every agent at once. That needs a different setup.
 
 ## Key terms
@@ -159,7 +286,7 @@ These come from re-reading the pre-sprint traces on 6 November, during the sprin
 - [x] D2 implementation, amendments, calibration, final EVAL, both arms, ledgers and cross-checked results
 - [x] Part B sandbox, registration, 180 Codex sessions, ledger and cross-checked descriptive results
 - [x] Separate D2 exploratory analyses (published on the linked exploratory branch)
-- [x] Submission paper drafted and revised locally; not yet published in this repository
+- [x] Paper submitted to the Swarm Alignment Hackathon (9 November 2026); the PDF will be added after judging.
 
 ## Reproducing and auditing
 
@@ -199,6 +326,24 @@ Pre-sprint runs used `gpt-6.1-sol` at low reasoning effort, through fresh Codex 
 ## How this connects to earlier work
 
 Roger and Greenblatt studied removing hidden information by paraphrasing model text. Hsu and colleagues found downstream agents returning towards their own reading of the evidence; Earshot's default-list pattern connects to that observation without establishing the same internal mechanism. Hand and Brain studies hidden information carried by choices that survive meaning-preserving paraphrasing; Earshot's relays choose references again. Kill-Chain Canaries tracks injected tokens across stages. BRA-Audit allocates audit points under a budget. Earshot complements these by running the same intervention audit before a relay and at the receiver. Zhang and Emu intervene on latent messages at the receiver boundary; Audit the Whisper combines several detection signals, including an agent-permutation test. Earshot examines an explicit file-reference field and separately checks real repairs.
+
+## Models and credits
+
+Versions below come from the saved study records.
+
+| Study | Arm | Model | CLI | Record |
+| --- | --- | --- | --- | --- |
+| D1 | Codex | `gpt-6.1-sol`, low effort | Codex CLI `0.165.0-alpha.1.2` | [Backend configuration](sprint/partD/D1/codex_config.json); all saved arm traces record this CLI version |
+| D1 | Claude | `claude-sonnet-5-5`, low effort | Claude Code `2.1.319` | [Claude-arm configuration](https://github.com/Rick-Clinton-jpg/Earshot/blob/421e561fe6a93d0d4d07b125bb3b872657d4ea2a/sprint/partD/D1/claude_config.json); all saved arm traces record this CLI version |
+| D2 | Codex | `gpt-6.1-sol` | Codex CLI `0.165.0-alpha.1.2` | [D2 results, section 1](sprint/partD/D2/results/D2_RESULTS.md#1-what-was-run) |
+| D2 | Claude | `claude-sonnet-5-5` | Claude Code `2.1.319` | [D2 results, section 1](sprint/partD/D2/results/D2_RESULTS.md#1-what-was-run) |
+| Part B | Codex | `gpt-6.1-sol`, low effort | Codex CLI `0.165.0-alpha.1.2` | [Registered backend and version binding](sprint/partB/PART_B_registration.json) |
+
+Designed and directed by the author; implemented and executed with Codex; reviewed with Claude.
+
+## Licence
+
+Copyright 2026 Rick Clinton. Licensed under Apache-2.0 (LICENSE). Radon copies used as task material keep their own MIT licence (sprint/partB/inputs/RADON_LICENSE.txt).
 
 ## References
 

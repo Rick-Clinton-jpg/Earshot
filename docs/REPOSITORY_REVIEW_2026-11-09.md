@@ -19,7 +19,7 @@ Reviewed `main` at `517bd31593bafe64340b5a8e8a8f3b326bab46e8`, which matched Git
 ## Verification
 
 - Full suite, including the D2 simulation tests: **370 passed in 54.08 seconds**. No source or test changes were needed.
-- Command: `PYTHONDONTWRITEBYTECODE=1 EARSHOT_TEST_WORKSPACE=/Users/gho5t/Documents/Codex/2026-11-04/i/work/earshot_d1_isolated/workspace /Users/gho5t/Documents/Codex/2026-11-04/i/work/.venv/bin/python3 -m pytest -q -p no:cacheprovider tests sprint/partD/D2/sim/test_sim_c.py`.
+- Command: `PYTHONDONTWRITEBYTECODE=1 EARSHOT_TEST_WORKSPACE=<local-workspace>/work/earshot_d1_isolated/workspace <local-workspace>/work/.venv/bin/python3 -m pytest -q -p no:cacheprovider tests sprint/partD/D2/sim/test_sim_c.py`.
 - All **856 unique files** covered by the D1/D2/Part B source seals and Codex Seal 2 matched their recorded hashes before editing and remained unchanged after validation.
 - Local Codex runtime-ledger digests and every listed file hash matched: D1 **363**, D2 **948**, Part B **115,026** entries; **116,337** total. This is a fresh byte-integrity check of local Codex records. Claude runtime trees were not freshly re-hashed in this review; their published cross-check records were read.
 - All **86** prior-work import-manifest entries matched byte counts and hashes.
